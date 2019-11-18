@@ -190,8 +190,10 @@ void gebaar::io::Input::handle_touch_event_motion(libinput_event_touch* tev)
         std::pair<double, double> prevcoord = touch_swipe_event.prev_xy.find(libinput_event_touch_get_slot(tev))->second;
         double prevx = prevcoord.first;
         double prevy = prevcoord.second;
-        touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))->second = { libinput_event_touch_get_x(tev) - prevx, libinput_event_touch_get_y(tev) - prevy };
-        touch_swipe_event.prev_xy.find(libinput_event_touch_get_slot(tev))->second = { libinput_event_touch_get_x(tev), libinput_event_touch_get_y(tev) };
+        touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))->second.first += (libinput_event_touch_get_x(tev) - prevx);
+        touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))->second.second += (libinput_event_touch_get_y(tev) - prevy);
+        touch_swipe_event.prev_xy.find(libinput_event_touch_get_slot(tev))->second = { libinput_event_touch_get_x(tev), libinput_event_touch_get_y(tev) }; 
+        spdlog::get("main")->debug("[{}] at {} - {} dx: {} , dy: {}", FN, __LINE__, __func__, touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))->second.first, touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))->second.second);
     }
 }
 
@@ -225,6 +227,7 @@ void gebaar::io::Input::handle_swipe_event_with_coords(libinput_event_gesture* g
 {
     gesture_swipe_event.x += libinput_event_gesture_get_dx(gev);
     gesture_swipe_event.y += libinput_event_gesture_get_dy(gev);
+    spdlog::get("main")->debug("[{}] at {} - {} dx: {} , dy: {}", FN, __LINE__, __func__, gesture_swipe_event.x, gesture_swipe_event.y);
 }
 
 /**
@@ -267,6 +270,12 @@ bool gebaar::io::Input::gesture_device_exists()
     swipe_event_group = "";
     while ((libinput_event = libinput_get_event(libinput)) != nullptr) {
         auto device = libinput_event_get_device(libinput_event);
+        
+        spdlog::get("main")->debug("[{}] at {} - {}: sysname: {}", FN, __LINE__, __func__, libinput_device_get_sysname(device));
+        spdlog::get("main")->debug("[{}] at {} - {}: name: {}", FN, __LINE__, __func__, libinput_device_get_name(device));
+        spdlog::get("main")->debug("[{}] at {} - {}: isgesture: {}", FN, __LINE__, __func__, libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_GESTURE));
+        spdlog::get("main")->debug("[{}] at {} - {}: istouch: {} \n", FN, __LINE__, __func__, libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_TOUCH));
+        
         if (libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_GESTURE)) {
             swipe_event_group = "GESTURE";
         } else if (libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_TOUCH)) {
@@ -275,6 +284,10 @@ bool gebaar::io::Input::gesture_device_exists()
 
         libinput_event_destroy(libinput_event);
         libinput_dispatch(libinput);
+        
+        if (swipe_event_group == "GESTURE") {
+            break;
+        } 
     }
     if (swipe_event_group.empty()) {
         spdlog::get("main")->error("[{}] at {} - {}: Gesture/Touch device not found", FN, __LINE__, __func__);
