@@ -28,32 +28,32 @@ bool gebaar::daemonizer::Daemonizer::daemonize()
 {
     pid_t pid = 0;
     pid = fork();
-    if (pid<0) {
+    if (pid < 0) {
         exit(EXIT_FAILURE);
     }
-    if (pid>0) {
+    if (pid > 0) {
         exit(EXIT_SUCCESS);
     }
-    if (setsid()<0) {
+    if (setsid() < 0) {
         // Boo.
     }
     signal(SIGCHLD, SIG_IGN);
     signal(SIGTRAP, SIG_IGN);
     pid = fork();
-    if (pid<0) {
+    if (pid < 0) {
         exit(EXIT_FAILURE);
     }
-    if (pid>0) {
+    if (pid > 0) {
         exit(EXIT_SUCCESS);
     }
     umask(0);
-    if ((chdir("/"))<0) {
+    if ((chdir("/")) < 0) {
         return false;
     }
     close(STDOUT_FILENO);
     close(STDIN_FILENO);
     close(STDERR_FILENO);
-    if (getpid()!=getsid(getpid())) {
+    if (getpid() != getsid(getpid())) {
         //
     }
     return true;

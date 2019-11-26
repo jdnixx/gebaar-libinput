@@ -16,27 +16,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <libinput.h>
+#include <spdlog/spdlog.h>
+#include <cxxopts.hpp>
 #include "config/config.h"
 #include "daemonizer.h"
 #include "debug/debug.h"
 #include "io/input.h"
 #include "spdlog/fmt/ostr.h"
 #include "spdlog/sinks/stdout_sinks.h"
-#include <spdlog/spdlog.h>
-#include <cxxopts.hpp>
-#include <libinput.h>
 
 gebaar::io::Input* input;
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     auto logger = spdlog::stdout_logger_mt("main");
 
     cxxopts::Options options(argv[0], "Gebaard Gestures Daemon");
 
     bool should_daemonize = false;
 
-    options.add_options()("b,background", "Daemonize", cxxopts::value(should_daemonize))("h,help", "Prints this help text")("v,verbose", "Prints verbose output during runtime");
+    options.add_options()("b,background", "Daemonize",
+                           cxxopts::value(should_daemonize))(
+            "h,help", "Prints this help text")(
+            "v,verbose", "Prints verbose output during runtime");
 
     auto result = options.parse(argc, argv);
 
@@ -51,12 +53,12 @@ int main(int argc, char* argv[])
     }
 
     if (should_daemonize) {
-        auto* daemonizer = new gebaar::daemonizer::Daemonizer();
-        daemonizer->daemonize();
+        gebaar::daemonizer::Daemonizer().daemonize();
     }
 
-    std::shared_ptr<gebaar::config::Config> config = std::make_shared<gebaar::config::Config>();
-    input = new gebaar::io::Input(config); //, debug);
+    std::shared_ptr<gebaar::config::Config> config =
+            std::make_shared<gebaar::config::Config>();
+    input = new gebaar::io::Input(config);    //, debug);
     if (input->initialize()) {
         spdlog::get("main")->info("Running gebaar...");
         input->start_loop();
