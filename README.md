@@ -1,5 +1,9 @@
+
+[![Build Status](https://travis-ci.org/osleg/gebaar-libinput.svg?branch=master)](https://travis-ci.org/osleg/gebaar-libinput)
+
 Gebaar
 =========
+Forked from Coffee2CodeNL/gebaar-libinput since original repo unmaintained for half a year, yet this is NOT OFFICIAL repo!
 
 WM Independent Touchpad Gesture Daemon for libinput
 
@@ -36,7 +40,7 @@ Click to join: [![Discord](https://img.shields.io/discord/548978799136473106.svg
 14. Reboot and see the magic
 
 ```toml
-[[command-swipe]]
+[swipe.commands]
 fingers = 3
 left_up = ""
 right_up = ""
@@ -47,17 +51,24 @@ down = ""
 left = ""
 right = ""
 
-[[command-swipe]]
-fingers = 4
-left_up = ""
-right_up = ""
-up = ""
-left_down = ""
-right_down = ""
-down = ""
-left = ""
-right = ""
+[pinch.commands]
+in = ""
+out = ""
+
+[pinch.settings]
+threshold = 0.25
+one_shot = false
+
+
+[swipe.settings]
+threshold = 0.5
+one_shot = true
+trigger_on_release = false
 ```
+
+* `pinch.settings.threshold` key sets the distance between fingers where it shold trigger.
+  Defaults to `0.25` which means fingers should travel exactly 25% distance from their initial position.
+* `swipe.settings.threshold` sets the limit when swipe gesture should be executed. Defaults to 0.5.
 
 ### Repository versions
 
@@ -69,19 +80,41 @@ right = ""
 
 _~/.config/gebaar/gebaard.toml_
 ```toml
-[[command-swipe]]
+[swipe.commands]
 fingers = 3
+left_up = ""
+right_up = ""
 up = "bspc node -f north"
+left_down = ""
+right_down = ""
 down = "bspc node -f south"
 left = "bspc node -f west"
 right = "bspc node -f east"
 
-[[command-swipe]]
+
+[swipe.commands]
 fingers = 4
+left_up = ""
+right_up = ""
 up = "rofi -show combi"
+left_down = ""
+right_down = ""
 down = ""
 left = "bspc desktop -f prev"
 right = "bspc desktop -f next"
+
+[pinch.commands.two]
+in = "xdotool key Control_L+equal"
+out = "xdotool key Control_L+minus"
+
+[pinch.settings]
+threshold=0.25
+one_shot=false
+
+[swipe.settings]
+threshold = 0.5
+one_shot = true
+trigger_on_release = false
 ```
 
 Add `gebaard -b` to `~/.config/bspwm/bspwmrc`
@@ -89,9 +122,13 @@ Add `gebaard -b` to `~/.config/bspwm/bspwmrc`
 ### State of the project
 
 - [x] Receiving swipe events from libinput
-- [ ] Receiving pinch/zoom events from libinput
+- [x] Swipe gesture have trigger treshold
+- [x] Receiving pinch/zoom events from libinput
+- [x] Support continous pinch
+- [ ] Support pinch-and-rotate gestures
 - [ ] Receiving rotation events from libinput
 - [x] Converting libinput events to motions
 - [x] Running commands based on motions
 - [x] Refactor code to be up to Release standards, instead of testing-hell
+
 

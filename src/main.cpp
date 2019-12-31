@@ -17,16 +17,14 @@
 */
 
 // ---------------------------------Version------------------------------------
-#define GB_VERSION_MAJOR 1    // For breaking interface changes
+#define GB_VERSION_MAJOR 0    // For breaking interface changes
 #define GB_VERSION_MINOR 0    // For new (non-breaking) interface capabilities
-#define GB_VERSION_RELEASE 0  // For tweaks, bug fixes or development
+#define GB_VERSION_RELEASE 6  // For tweaks, bug fixes or development
 
 #include <libinput.h>
-#include <spdlog/spdlog.h>
 #include <cxxopts.hpp>
 #include "config/config.h"
 #include "daemonizer.h"
-#include "debug/debug.h"
 #include "io/input.h"
 #include "spdlog/fmt/ostr.h"
 #include "spdlog/sinks/stdout_sinks.h"
@@ -43,15 +41,14 @@ std::string get_proc_name() {
 
 int main(int argc, char* argv[]) {
     auto logger = spdlog::stdout_logger_mt("main");
-
     cxxopts::Options options(argv[0], "Gebaard Gestures Daemon");
 
     bool should_daemonize = false;
 
     options.add_options()("b,background", "Daemonize",
-                           cxxopts::value(should_daemonize))(
-            "h,help", "Prints this help text")(
-            "v,verbose", "Prints verbose output during runtime");
+                          cxxopts::value(should_daemonize))(
+        "h,help", "Prints this help text")(
+        "v,verbose", "Prints verbose output during runtime");
 
     auto result = options.parse(argc, argv);
 
@@ -68,10 +65,9 @@ int main(int argc, char* argv[]) {
     if (should_daemonize) {
         gebaar::daemonizer::Daemonizer().daemonize();
     }
+    auto config = std::make_shared<gebaar::config::Config>();
+    input = new gebaar::io::Input(config);
 
-    std::shared_ptr<gebaar::config::Config> config =
-            std::make_shared<gebaar::config::Config>();
-    input = new gebaar::io::Input(config);    //, debug);
     if (input->initialize()) {
         spdlog::get("main")->info("Running {} v{}",
                     get_proc_name(),
