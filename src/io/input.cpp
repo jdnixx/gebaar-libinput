@@ -425,18 +425,25 @@ bool gebaar::io::Input::gesture_device_exists() {
         } else if (libinput_device_has_capability(device,
                                                   LIBINPUT_DEVICE_CAP_TOUCH)) {
             swipe_event_group = "TOUCH";
+        }
 
-            libinput_event_destroy(libinput_event);
-            libinput_dispatch(libinput);
+        libinput_event_destroy(libinput_event);
+        libinput_dispatch(libinput);
+
+        if (swipe_event_group == "GESTURE") {
+            break;
         }
-        if (!swipe_event_group.empty()) {
-            spdlog::get("main")->debug(
-                "[{}] at {} - {}: Gesture/Touch device found", FN, __LINE__,
-                __func__);
-            spdlog::get("main")->debug(
-                "[{}] at {} - {}: Gebaar using '{}' events", FN, __LINE__,
-                __func__, swipe_event_group);
-        }
+    }
+    if (swipe_event_group.empty()) {
+        spdlog::get("main")->error(
+            "[{}] at {} - {}: Gesture/Touch device not found", FN, __LINE__,
+            __func__);
+    } else {
+        spdlog::get("main")->debug(
+            "[{}] at {} - {}: Gesture/Touch device found", FN, __LINE__,
+            __func__);
+        spdlog::get("main")->debug("[{}] at {} - {}: Gebaar using '{}' events",
+                                   FN, __LINE__, __func__, swipe_event_group);
     }
     return !swipe_event_group.empty();
 }
