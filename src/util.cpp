@@ -24,5 +24,5 @@
  * @return charArr or an empty string, if charArr is a nullptr
  */
 std::string gebaar::util::stringFromCharArray(char* charArr) {
-    return charArr == nullptr ? "" : charArr;
+  return charArr == nullptr ? "" : charArr;
 }

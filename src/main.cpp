@@ -31,51 +31,49 @@
 
 gebaar::io::Input* input;
 
-
 std::string get_proc_name() {
-    std::ifstream comm("/proc/self/comm");
-    std::string name;
-    getline(comm, name);
-    return name;
+  std::ifstream comm("/proc/self/comm");
+  std::string name;
+  getline(comm, name);
+  return name;
 }
 
 int main(int argc, char* argv[]) {
-    auto logger = spdlog::stdout_logger_mt("main");
-    cxxopts::Options options(argv[0], "Gebaard Gestures Daemon");
+  auto logger = spdlog::stdout_logger_mt("main");
+  cxxopts::Options options(argv[0], "Gebaard Gestures Daemon");
 
-    bool should_daemonize = false;
+  bool should_daemonize = false;
 
-    options.add_options()("b,background", "Daemonize",
-                          cxxopts::value(should_daemonize))(
-        "h,help", "Prints this help text")(
-        "v,verbose", "Prints verbose output during runtime");
+  options.add_options()("b,background", "Daemonize",
+                        cxxopts::value(should_daemonize))(
+      "h,help", "Prints this help text")(
+      "v,verbose", "Prints verbose output during runtime");
 
-    auto result = options.parse(argc, argv);
+  auto result = options.parse(argc, argv);
 
-    if (result.count("help")) {
-        std::cout << options.help() << std::endl;
-        exit(EXIT_SUCCESS);
-    }
+  if (result.count("help")) {
+    std::cout << options.help() << std::endl;
+    exit(EXIT_SUCCESS);
+  }
 
-    if (result.count("verbose")) {
-        std::cout << "verbose mode" << std::endl;
-        spdlog::set_level(spdlog::level::debug);
-    }
+  if (result.count("verbose")) {
+    std::cout << "verbose mode" << std::endl;
+    spdlog::set_level(spdlog::level::debug);
+  }
 
-    if (should_daemonize) {
-        gebaar::daemonizer::Daemonizer().daemonize();
-    }
-    auto config = std::make_shared<gebaar::config::Config>();
-    input = new gebaar::io::Input(config);
+  if (should_daemonize) {
+    gebaar::daemonizer::Daemonizer().daemonize();
+  }
+  auto config = std::make_shared<gebaar::config::Config>();
+  input = new gebaar::io::Input(config);
 
-    if (input->initialize()) {
-        spdlog::get("main")->info("Running {} v{}",
-                    get_proc_name(),
-                    std::to_string(GB_VERSION_MAJOR) + "." +
-                    std::to_string(GB_VERSION_MINOR) + "." +
-                    std::to_string(GB_VERSION_RELEASE));
-        input->start_loop();
-    }
+  if (input->initialize()) {
+    spdlog::get("main")->info("Running {} v{}", get_proc_name(),
+                              std::to_string(GB_VERSION_MAJOR) + "." +
+                                  std::to_string(GB_VERSION_MINOR) + "." +
+                                  std::to_string(GB_VERSION_RELEASE));
+    input->start_loop();
+  }
 
-    return 0;
+  return 0;
 }

@@ -24,12 +24,11 @@
 #define SRC_GEBAAR_DAEMONIZER_H_
 namespace gebaar::daemonizer {
 class Daemonizer {
-   public:
-    Daemonizer();
-    ~Daemonizer();
-    bool daemonize();
+ public:
+  Daemonizer();
+  ~Daemonizer();
+  bool daemonize();
 };
 }  // namespace gebaar::daemonizer
-
 
 #endif  // SRC_GEBAAR_DAEMONIZER_H_
