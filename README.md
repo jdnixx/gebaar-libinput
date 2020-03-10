@@ -40,7 +40,7 @@ Click to join: [![Discord](https://img.shields.io/discord/548978799136473106.svg
 14. Reboot and see the magic
 
 ```toml
-[swipe.commands]
+[[swipe.commands]]
 fingers = 3
 left_up = ""
 right_up = ""
@@ -51,16 +51,16 @@ down = ""
 left = ""
 right = ""
 
-[pinch.commands]
+[[pinch.commands]]
 in = ""
 out = ""
 
-[pinch.settings]
+[[pinch.settings]]
 threshold = 0.25
 one_shot = false
 
 
-[swipe.settings]
+[[swipe.settings]]
 threshold = 0.5
 one_shot = true
 trigger_on_release = false
@@ -80,7 +80,7 @@ trigger_on_release = false
 
 _~/.config/gebaar/gebaard.toml_
 ```toml
-[swipe.commands]
+[[swipe.commands]]
 fingers = 3
 left_up = ""
 right_up = ""
@@ -92,7 +92,7 @@ left = "bspc node -f west"
 right = "bspc node -f east"
 
 
-[swipe.commands]
+[[swipe.commands]]
 fingers = 4
 left_up = ""
 right_up = ""
@@ -103,15 +103,15 @@ down = ""
 left = "bspc desktop -f prev"
 right = "bspc desktop -f next"
 
-[pinch.commands.two]
+[[pinch.commands.two]]
 in = "xdotool key Control_L+equal"
 out = "xdotool key Control_L+minus"
 
-[pinch.settings]
+[[pinch.settings]]
 threshold=0.25
 one_shot=false
 
-[swipe.settings]
+[[swipe.settings]]
 threshold = 0.5
 one_shot = true
 trigger_on_release = false
