@@ -32,10 +32,13 @@
 
 #define MAX_DIRECTION 9
 #define MIN_DIRECTION 1
+#define LONGSWIPE_SCREEN_PERCENT_DEFAULT 70
 
-const std::map<int, std::string> SWIPE_COMMANDS = {
-    {1, "left_up"}, {2, "up"},        {3, "right_up"}, {4, "left"},
-    {6, "right"},   {7, "left_down"}, {8, "down"},     {9, "right_down"}};
+const std::map<size_t, std::string> SWIPE_COMMANDS = {
+    {1, "left_up"},        {2, "up"},
+    {3, "right_up"},       {4, "left"},
+    {6, "right"},          {7, "left_down"},
+    {8, "down"},           {9, "right_down"}};
 
 namespace gebaar::config {
 class Config {
@@ -50,14 +53,18 @@ class Config {
         bool pinch_one_shot;
         double pinch_threshold;
 
-        bool swipe_one_shot;
-        double swipe_threshold;
-        bool swipe_trigger_on_release;
+        bool gesture_swipe_one_shot;
+        double gesture_swipe_threshold;
+        bool gesture_swipe_trigger_on_release;
+
+        double touch_longswipe_screen_percentage;
     } settings;
 
     enum pinch { PINCH_IN, PINCH_OUT };
     std::string pinch_commands[10];
-    std::string get_command(int fingers, int swipe_type);
+    std::string get_command(size_t fingers, size_t swipe_type);
+    std::string get_swipe_type_name(size_t key);
+
 
    private:
     bool config_file_exists();
@@ -66,7 +73,7 @@ class Config {
 
     std::string config_file_path;
     std::shared_ptr<cpptoml::table> config;
-    std::map<int, std::map<std::string, std::string>> commands;
+    std::map<size_t, std::map<std::string, std::string>> commands;
 };
 }  // namespace gebaar::config
 #endif  // SRC_CONFIG_CONFIG_H_

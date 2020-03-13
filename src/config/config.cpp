@@ -54,20 +54,27 @@ void gebaar::config::Config::load_config() {
         exit(1);
       }
       for (const auto& table : *command_swipe_table) {
-        auto fingers = table->get_as<int>("fingers");
-        for (std::pair<int, std::string> element : SWIPE_COMMANDS) {
+        auto fingers = table->get_as<size_t>("fingers");
+        for (std::pair<size_t, std::string> element : SWIPE_COMMANDS) {
           commands[*fingers][element.second] =
               table->get_qualified_as<std::string>(element.second).value_or("");
         }
-        settings.swipe_threshold =
-            config->get_qualified_as<double>("swipe.settings.threshold")
+        settings.gesture_swipe_threshold =
+            config->get_qualified_as<double>("gesture_swipe.settings.threshold")
                 .value_or(0.5);
-        settings.swipe_one_shot =
-            config->get_qualified_as<bool>("swipe.settings.one_shot")
+        settings.gesture_swipe_one_shot =
+            config->get_qualified_as<bool>("gesture_swipe.settings.one_shot")
                 .value_or(true);
-        settings.swipe_trigger_on_release =
-            config->get_qualified_as<bool>("swipe.settings.trigger_on_release")
+        settings.gesture_swipe_trigger_on_release =
+            config
+                ->get_qualified_as<bool>(
+                    "gesture_swipe.settings.trigger_on_release")
                 .value_or(true);
+        settings.touch_longswipe_screen_percentage =
+            config
+                ->get_qualified_as<double>(
+                    "touch_swipe.settings.longswipe_screen_percentage")
+                .value_or(LONGSWIPE_SCREEN_PERCENT_DEFAULT);
 
         /* Pinch settings */
         pinch_commands[PINCH_IN] =
@@ -129,13 +136,15 @@ gebaar::config::Config::Config() {
  * Given a number of fingers and a swipe type return configured command
  */
 
-std::string gebaar::config::Config::get_command(int fingers, int swipe_type) {
-  if (fingers > 1 && swipe_type >= MIN_DIRECTION &&
+std::string gebaar::config::Config::get_swipe_type_name(size_t key) {
+  return SWIPE_COMMANDS.at(key);
+}
+
+std::string gebaar::config::Config::get_command(size_t fingers,
+                                                size_t swipe_type) {
+  if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
       swipe_type <= MAX_DIRECTION) {
     if (commands.count(fingers)) {
-      spdlog::get("main")->info(
-          "[{}] at {} - gesture: {} finger {} ... executing", FN, __LINE__,
-          fingers, SWIPE_COMMANDS.at(swipe_type));
       return commands[fingers][SWIPE_COMMANDS.at(swipe_type)];
     }
   }
