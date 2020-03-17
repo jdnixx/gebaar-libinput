@@ -19,7 +19,7 @@
 // ---------------------------------Version------------------------------------
 #define GB_VERSION_MAJOR 0    // For breaking interface changes
 #define GB_VERSION_MINOR 0    // For new (non-breaking) interface capabilities
-#define GB_VERSION_RELEASE 6  // For tweaks, bug fixes or development
+#define GB_VERSION_RELEASE 7  // For tweaks, bug fixes or development
 
 #include <libinput.h>
 #include <cxxopts.hpp>

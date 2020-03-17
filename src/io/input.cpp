@@ -45,10 +45,10 @@ bool gebaar::io::Input::initialize_context() {
   return libinput_udev_assign_seat(libinput, "seat0") == 0;
 }
 
-int gebaar::io::Input::get_swipe_type(double sdx, double sdy) {
+size_t gebaar::io::Input::get_swipe_type(double sdx, double sdy) {
   double x = sdx;
   double y = sdy;
-  int swipe_type = 5;                  // middle = no swipe
+  size_t swipe_type = 5;               // middle = no swipe
                                        // 1 = left_up, 2 = up, 3 = right_up...
                                        // 1 2 3
                                        // 4 5 6
@@ -75,11 +75,36 @@ int gebaar::io::Input::get_swipe_type(double sdx, double sdy) {
   return swipe_type;
 }
 
-void gebaar::io::Input::apply_swipe(int swipe_type, int fingers) {
+bool gebaar::io::Input::test_above_threshold(size_t swipe_type, double length,
+                                             libinput_device* dev) {
+  double w = 0;
+  double h = 0;
+  libinput_device_get_size(dev, &w, &h);
+
+  size_t dim;
+  if (swipe_type % 2 != 0) {
+    double d = hypot(w, h);
+    dim = d * config->settings.touch_longswipe_screen_percentage / 100;
+  } else if (swipe_type < 4 || swipe_type > 6) {
+    dim = h * config->settings.touch_longswipe_screen_percentage / 100;
+  } else {
+    dim = w * config->settings.touch_longswipe_screen_percentage / 100;
+  }
+
+  spdlog::get("main")->debug(
+      "percentage {}, required length {}, actual length {}",
+      config->settings.touch_longswipe_screen_percentage, dim, length);
+  return (length > dim);
+}
+
+void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers) {
   std::string command = config->get_command(fingers, swipe_type);
-  spdlog::get("main")->debug("[{}] at {} - {}, fgrs: {}, swpe-typ: {}", FN,
-                             __LINE__, __func__, fingers, swipe_type);
   if (command.length() > 0) {
+    spdlog::get("main")->debug(
+        "[{}] at {} - {} - fingers: {}, gesture: {} ... "
+        "Executing",
+        FN, __LINE__, __func__, fingers,
+        config->get_swipe_type_name(swipe_type));
     std::system(command.c_str());
   }
 }
@@ -96,20 +121,18 @@ void gebaar::io::Input::apply_swipe(int swipe_type, int fingers) {
  * @param slots Represents pair(finger, timeoftouch(down/lift))
  */
 void gebaar::io::Input::check_multitouch_down_up(
-    std::vector<std::pair<int, double>> slots, std::string downup) {
-  if (touch_swipe_event.isClean && slots.size() > 1) {
-    std::vector<std::pair<int, double>>::reverse_iterator iter = slots.rbegin();
-    std::vector<std::pair<int, double>>::reverse_iterator prev_iter =
+    std::vector<std::pair<size_t, double>> slots) {
+  if (slots.size() > 1) {
+    std::vector<std::pair<size_t, double>>::reverse_iterator iter =
+        slots.rbegin();
+    std::vector<std::pair<size_t, double>>::reverse_iterator prev_iter =
         std::next(iter, 1);
     double timebetweenslots = iter->second - prev_iter->second;
     if (timebetweenslots <= THRESH) {
       touch_swipe_event.fingers = slots.size();
-    } else {
-      touch_swipe_event.isClean = false;
-      spdlog::get("main")->debug(
-          "[{}] at {} - {} - {}: finger added/lifted too late/early. {} ", FN,
-          __LINE__, __func__, downup);
     }
+  } else {
+    touch_swipe_event.fingers = slots.size();
   }
 }
 
@@ -121,9 +144,9 @@ void gebaar::io::Input::check_multitouch_down_up(
  * @param tev Touch Event
  */
 void gebaar::io::Input::handle_touch_event_down(libinput_event_touch* tev) {
-  touch_swipe_event.down_slots.push_back(std::pair<int, double>(
+  touch_swipe_event.down_slots.push_back(std::pair<size_t, double>(
       libinput_event_touch_get_slot(tev), libinput_event_touch_get_time(tev)));
-  check_multitouch_down_up(touch_swipe_event.down_slots, "down_slots");
+  check_multitouch_down_up(touch_swipe_event.down_slots);
 }
 
 /**
@@ -137,37 +160,89 @@ void gebaar::io::Input::handle_touch_event_down(libinput_event_touch* tev) {
  * @param tev Touch Event
  */
 void gebaar::io::Input::handle_touch_event_up(libinput_event_touch* tev) {
-  touch_swipe_event.up_slots.push_back(std::pair<int, double>(
+  touch_swipe_event.up_slots.push_back(std::pair<size_t, double>(
       libinput_event_touch_get_slot(tev), libinput_event_touch_get_time(tev)));
-  check_multitouch_down_up(touch_swipe_event.up_slots, "up_slots");
+  check_multitouch_down_up(touch_swipe_event.up_slots);
 
-  if (touch_swipe_event.up_slots.size() ==
-      touch_swipe_event.down_slots.size()) {
-    std::map<int, std::pair<double, double>>::iterator iter =
-        touch_swipe_event.delta_xy.begin();
-    std::vector<int> swipes;
-    int swipe_type;
-    while (iter != touch_swipe_event.delta_xy.end()) {
-      double x = iter->second.first;
-      double y = iter->second.second;
-      swipe_type = get_swipe_type(x, y);
+  bool a =
+      touch_swipe_event.up_slots.size() == touch_swipe_event.down_slots.size();
+
+  if (a) {
+    std::vector<size_t> swipes;
+    size_t swipe_type;
+    size_t slot;
+    double dx;
+    double dy;
+    double swipe_length;
+    for (auto iter = touch_swipe_event.delta_xy.begin();
+         iter != touch_swipe_event.delta_xy.end(); iter++) {
+      slot = iter->first;
+      dx = iter->second.first;
+      dy = iter->second.second;
+      swipe_length = get_swipe_length(dx, dy);
+      libinput_device* dev =
+          libinput_event_get_device(libinput_event_touch_get_base_event(tev));
+      swipe_type = get_swipe_type(dx, dy);
+
+      if (touch_swipe_event.fingers == 1) {
+        if (!test_above_threshold(swipe_type, swipe_length, dev)) {
+          spdlog::get("main")->debug("swipe not above threshold");
+          break;
+        } else {
+          spdlog::get("main")->debug("swipe above threshold");
+        }
+      }
+
+      spdlog::get("main")->debug(
+          "[{}] at {} - {}, slot: {}, swipe-type: {}, length: {}", FN, __LINE__,
+          __func__, slot, config->get_swipe_type_name(swipe_type),
+          swipe_length);
 
       if (!swipes.empty() && swipe_type != swipes.back()) {
-        touch_swipe_event.isClean = false;
+        break;
       }
-      spdlog::get("main")->debug("[{}] at {} - {}, swpe-type: {}", FN, __LINE__,
-                                 __func__, swipe_type);
+
       swipes.push_back(swipe_type);
-      iter++;
     }
 
-    if (touch_swipe_event.down_slots.size() !=
-        touch_swipe_event.delta_xy.size()) {
-      touch_swipe_event.isClean = false;
-    }
+    /*
+      1) Check number of down slots equals
+      calculated number of fingers (check_multi_touch_downup). This prevents
+      swipes when fingers are added too late or lifted too early
 
-    if (touch_swipe_event.isClean) {
-      apply_swipe(swipe_type, touch_swipe_event.fingers);
+      2) Check number down slots equals number of touches sensed moving across
+      the screen. This prevents swipes where the fingers are lifted and placed
+      back on the screen before the touch_swipe_event structure is refreshed
+      (causing additional downslots)
+
+      3) Check number of valid swipes (each finger of multi touch
+      swipe) equals calculated number of fingers. This only allows swipes
+      where all swiping fingers are going in the same direction
+    */
+    bool is_valid_gesture = true;
+    is_valid_gesture =
+        (is_valid_gesture &&
+         (touch_swipe_event.down_slots.size() == touch_swipe_event.fingers));
+    if (!is_valid_gesture) {
+      spdlog::get("main")->info("down slots do not match number of fingers");
+    } else {
+      is_valid_gesture =
+          (is_valid_gesture && (touch_swipe_event.down_slots.size() ==
+                                touch_swipe_event.delta_xy.size()));
+      if (!is_valid_gesture) {
+        spdlog::get("main")->info("down slots do not match motion slots");
+      } else {
+        is_valid_gesture =
+            (is_valid_gesture && (swipes.size() == touch_swipe_event.fingers));
+        if (!is_valid_gesture) {
+          spdlog::get("main")->info(
+              "number of valid swipes {} do not match number of fingers {}",
+              swipes.size(), touch_swipe_event.fingers);
+        } else {
+          spdlog::get("main")->info("applying swipe");
+          apply_swipe(swipe_type, touch_swipe_event.fingers);
+        }
+      }
     }
 
     spdlog::get("main")->debug(
@@ -178,17 +253,13 @@ void gebaar::io::Input::handle_touch_event_up(libinput_event_touch* tev) {
         touch_swipe_event.down_slots.size(), touch_swipe_event.up_slots.size(),
         touch_swipe_event.delta_xy.size(), touch_swipe_event.prev_xy.size());
     touch_swipe_event = {};
-    spdlog::get("main")->debug(
-        "[{}] at {} - {}, fgrs: {}, d-slts: {}, u-slts: {}, d-xy: {}, "
-        "prv-xy: "
-        "{}",
-        FN, __LINE__, __func__, touch_swipe_event.fingers,
-        touch_swipe_event.down_slots.size(), touch_swipe_event.up_slots.size(),
-        touch_swipe_event.delta_xy.size(), touch_swipe_event.prev_xy.size());
-    spdlog::get("main")->debug(
-        "[{}] at {} - {}: touch gesture finished, {}\n\n", FN, __LINE__,
-        __func__, touch_swipe_event.isClean);
+    spdlog::get("main")->debug("[{}] at {} - {}: touch gesture finished\n\n",
+                               FN, __LINE__, __func__);
   }
+}
+
+double gebaar::io::Input::get_swipe_length(double sdx, double sdy) {
+  return sqrt(pow(sdx, 2) + pow(sdy, 2) * 1.0);
 }
 
 /**
@@ -204,11 +275,14 @@ void gebaar::io::Input::handle_touch_event_up(libinput_event_touch* tev) {
 void gebaar::io::Input::handle_touch_event_motion(libinput_event_touch* tev) {
   if (touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev)) ==
       touch_swipe_event.delta_xy.end()) {
-    touch_swipe_event.delta_xy.insert(std::pair<int, std::pair<double, double>>(
-        libinput_event_touch_get_slot(tev), {0, 0}));
-    touch_swipe_event.prev_xy.insert(std::pair<int, std::pair<double, double>>(
-        libinput_event_touch_get_slot(tev),
-        {libinput_event_touch_get_x(tev), libinput_event_touch_get_y(tev)}));
+    touch_swipe_event.delta_xy.insert(
+        std::pair<size_t, std::pair<double, double>>(
+            libinput_event_touch_get_slot(tev), {0, 0}));
+    touch_swipe_event.prev_xy.insert(
+        std::pair<size_t, std::pair<double, double>>(
+            libinput_event_touch_get_slot(tev),
+            {libinput_event_touch_get_x(tev),
+             libinput_event_touch_get_y(tev)}));
   } else {
     std::pair<double, double> prevcoord =
         touch_swipe_event.prev_xy.find(libinput_event_touch_get_slot(tev))
@@ -216,10 +290,17 @@ void gebaar::io::Input::handle_touch_event_motion(libinput_event_touch* tev) {
     double prevx = prevcoord.first;
     double prevy = prevcoord.second;
     touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))
-        ->second = {libinput_event_touch_get_x(tev) - prevx,
-                    libinput_event_touch_get_y(tev) - prevy};
+        ->second.first += (libinput_event_touch_get_x(tev) - prevx);
+    touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))
+        ->second.second += (libinput_event_touch_get_y(tev) - prevy);
     touch_swipe_event.prev_xy.find(libinput_event_touch_get_slot(tev))->second =
         {libinput_event_touch_get_x(tev), libinput_event_touch_get_y(tev)};
+    spdlog::get("main")->debug(
+        "[{}] at {} - {} dx: {} , dy: {}", FN, __LINE__, __func__,
+        touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))
+            ->second.first,
+        touch_swipe_event.delta_xy.find(libinput_event_touch_get_slot(tev))
+            ->second.second);
   }
 }
 
@@ -326,7 +407,7 @@ void gebaar::io::Input::handle_swipe_event_without_coords(
   } else {
     // This executed when fingers left the touchpad
     if (!gesture_swipe_event.executed &&
-        config->settings.swipe_trigger_on_release) {
+        config->settings.gesture_swipe_trigger_on_release) {
       trigger_swipe_command();
     }
     reset_swipe_event();
@@ -339,13 +420,14 @@ void gebaar::io::Input::handle_swipe_event_without_coords(
  */
 void gebaar::io::Input::handle_swipe_event_with_coords(
     libinput_event_gesture* gev) {
-  if (config->settings.swipe_one_shot && gesture_swipe_event.executed) return;
+  if (config->settings.gesture_swipe_one_shot && gesture_swipe_event.executed)
+    return;
 
   // Since swipe gesture counts in dpi we have to convert
-  int threshold_x = config->settings.swipe_threshold * SWIPE_X_THRESHOLD *
-                    gesture_swipe_event.step;
-  int threshold_y = config->settings.swipe_threshold * SWIPE_Y_THRESHOLD *
-                    gesture_swipe_event.step;
+  int threshold_x = config->settings.gesture_swipe_threshold *
+                    SWIPE_X_THRESHOLD * gesture_swipe_event.step;
+  int threshold_y = config->settings.gesture_swipe_threshold *
+                    SWIPE_Y_THRESHOLD * gesture_swipe_event.step;
   gesture_swipe_event.x += libinput_event_gesture_get_dx_unaccelerated(gev);
   gesture_swipe_event.y += libinput_event_gesture_get_dy_unaccelerated(gev);
   if (abs(gesture_swipe_event.x) > threshold_x ||
@@ -365,7 +447,8 @@ void gebaar::io::Input::trigger_swipe_command() {
   double y = gesture_swipe_event.y;
   int swipe_type = get_swipe_type(x, y);
   apply_swipe(swipe_type, gesture_swipe_event.fingers);
-
+  spdlog::get("main")->debug("[{}] at {} - {}: swipe type {}", FN, __LINE__,
+                             __func__, config->get_swipe_type_name(swipe_type));
   gesture_swipe_event = {};
 }
 

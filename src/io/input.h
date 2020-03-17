@@ -21,6 +21,7 @@
 
 #include <fcntl.h>
 #include <libinput.h>
+#include <math.h>
 #include <poll.h>
 #include <zconf.h>
 #include <cstdarg>
@@ -57,14 +58,13 @@ struct gesture_pinch_event {
 };
 
 struct touch_swipe_event {
-  int fingers;
+  size_t fingers;
   double x;
   double y;
-  std::map<int, std::pair<double, double>> prev_xy;
-  std::map<int, std::pair<double, double>> delta_xy;
-  std::vector<std::pair<int, double>> down_slots;
-  std::vector<std::pair<int, double>> up_slots;
-  bool isClean = true;
+  std::map<size_t, std::pair<double, double>> prev_xy;
+  std::map<size_t, std::pair<double, double>> delta_xy;
+  std::vector<std::pair<size_t, double>> down_slots;
+  std::vector<std::pair<size_t, double>> up_slots;
 };
 class Input {
  public:
@@ -107,12 +107,11 @@ class Input {
   constexpr static struct libinput_interface libinput_interface = {
       open_restricted, close_restricted};
 
-  void check_multitouch_down_up(std::vector<std::pair<int, double>> slots,
-                                std::string downup);
+  void check_multitouch_down_up(std::vector<std::pair<size_t, double>> slots);
 
-  void apply_swipe(int swipe_type, int fingers);
+  void apply_swipe(size_t swipe_type, size_t fingers);
 
-  int get_swipe_type(double sdx, double sdy);
+  size_t get_swipe_type(double sdx, double sdy);
   /*
    * Decrements step of current trigger. Just to skip 0
    * @param cur current step
@@ -142,6 +141,11 @@ class Input {
   void handle_touch_event_up(libinput_event_touch* tev);
 
   void trigger_swipe_command();
+
+  double get_swipe_length(double sdx, double sdy);
+
+  bool test_above_threshold(size_t swipe_type, double length,
+                            libinput_device* dev);
 
   /* Pinch event */
   void reset_pinch_event();

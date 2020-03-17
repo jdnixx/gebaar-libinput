@@ -51,24 +51,51 @@ down = ""
 left = ""
 right = ""
 
-[[pinch.commands]]
+[[swipe.commands]]
+fingers = 4
+left_up = ""
+right_up = ""
+up = ""
+left_down = ""
+right_down = ""
+down = ""
+left = ""
+right = ""
+
+[[swipe.commands]]
+fingers = 1
+left_up = ""
+right_up = ""
+up = ""
+left_down = ""
+right_down = ""
+down = ""
+left = ""
+right = ""
+
+[pinch.commands]
 in = ""
 out = ""
 
-[[pinch.settings]]
+[pinch.settings]
 threshold = 0.25
 one_shot = false
 
 
-[[swipe.settings]]
+[gesture_swipe.settings]
 threshold = 0.5
 one_shot = true
 trigger_on_release = false
+
+[touch_swipe.settings]
+longswipe_screen_percentage = 95
 ```
 
 * `pinch.settings.threshold` key sets the distance between fingers where it shold trigger.
   Defaults to `0.25` which means fingers should travel exactly 25% distance from their initial position.
-* `swipe.settings.threshold` sets the limit when swipe gesture should be executed. Defaults to 0.5.
+* `gesture_swipe.settings.threshold` sets the limit when swipe gesture should be executed. Defaults to 0.5.
+* `touch_swipe.settings.longswipe_screen_percentage` percentage of a screen dimension a swipe must cover to be
+  interpreted as a longswipe. Only for 'fingers = 1'. (70% by default)
 
 ### Repository versions
 
@@ -91,7 +118,6 @@ down = "bspc node -f south"
 left = "bspc node -f west"
 right = "bspc node -f east"
 
-
 [[swipe.commands]]
 fingers = 4
 left_up = ""
@@ -103,18 +129,32 @@ down = ""
 left = "bspc desktop -f prev"
 right = "bspc desktop -f next"
 
-[[pinch.commands.two]]
+[[swipe.commands]]
+fingers = 1
+left_up = ""
+right_up = ""
+up = ""
+left_down = ""
+right_down = ""
+down = "echo long_swipe_down"
+left = ""
+right = ""
+
+[pinch.commands.two]
 in = "xdotool key Control_L+equal"
 out = "xdotool key Control_L+minus"
 
-[[pinch.settings]]
+[pinch.settings]
 threshold=0.25
 one_shot=false
 
-[[swipe.settings]]
+[gesture_swipe.settings]
 threshold = 0.5
 one_shot = true
 trigger_on_release = false
+
+[touch_swipe.settings]
+longswipe_screen_percentage = 95
 ```
 
 Add `gebaard -b` to `~/.config/bspwm/bspwmrc`
