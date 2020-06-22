@@ -19,6 +19,13 @@
 #include "input.h"
 #include <poll.h>
 
+static void runproc(const char* cmdline) {
+  int status = std::system(cmdline);
+  if (status != 0)
+    spdlog::get("main")->warn("{} -> Non-zero exit code: {}", cmdline,
+                               WEXITSTATUS(status));
+}
+
 /**
  * Input system constructor, we pass our Configuration object via a shared
  * pointer
@@ -105,7 +112,7 @@ void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers) {
         "Executing",
         FN, __LINE__, __func__, fingers,
         config->get_swipe_type_name(swipe_type));
-    std::system(command.c_str());
+    runproc(command.c_str());
   }
 }
 
@@ -331,7 +338,7 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Add 1 to required distance to get 2 > x > 1
     if (new_scale > 1 + config->settings.pinch_threshold) {
-      std::system(config->pinch_commands[config->PINCH_IN].c_str());
+      runproc(config->pinch_commands[config->PINCH_IN].c_str());
       gesture_pinch_event.executed = true;
     }
   } else {  // Scale Down
@@ -339,7 +346,7 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Substract from 1 to have inverted value for pinch in gesture
     if (gesture_pinch_event.scale < 1 - config->settings.pinch_threshold) {
-      std::system(config->pinch_commands[config->PINCH_OUT].c_str());
+      runproc(config->pinch_commands[config->PINCH_OUT].c_str());
       gesture_pinch_event.executed = true;
     }
   }
@@ -359,14 +366,14 @@ void gebaar::io::Input::handle_continouos_pinch(double new_scale) {
     spdlog::get("main")->debug("[{}] at {} - {}: Scale up", FN, __LINE__,
                                __func__);
     if (new_scale >= trigger) {
-      std::system(config->pinch_commands[config->PINCH_IN].c_str());
+      runproc(config->pinch_commands[config->PINCH_IN].c_str());
       inc_step(&gesture_pinch_event.step);
     }
   } else {  // Scale down
     spdlog::get("main")->debug("[{}] at {} - {}: Scale down", FN, __LINE__,
                                __func__);
     if (new_scale <= trigger) {
-      std::system(config->pinch_commands[config->PINCH_OUT].c_str());
+      runproc(config->pinch_commands[config->PINCH_OUT].c_str());
       dec_step(&gesture_pinch_event.step);
     }
   }
