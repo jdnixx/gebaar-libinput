@@ -104,13 +104,21 @@ bool gebaar::io::Input::test_above_threshold(size_t swipe_type, double length,
   return (length > dim);
 }
 
-void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers) {
-  std::string command = config->get_command(fingers, swipe_type);
+void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers, std::string type) {
+  std::string command;
+  if (strcmp(type.c_str(), "TOUCH") == 0) {
+    command = config->get_command(fingers, "TOUCH", swipe_type);
+  } else {
+    command = config->get_command(fingers, "GESTURE", swipe_type);
+  }
+  spdlog::get("main")->debug(
+      "[{}] at {} - {}: running thing {}", FN, __LINE__,
+      __func__, command);
   if (command.length() > 0) {
     spdlog::get("main")->debug(
-        "[{}] at {} - {} - fingers: {}, gesture: {} ... "
+        "[{}] at {} - {} - fingers: {}, type: {}, gesture: {} ... "
         "Executing",
-        FN, __LINE__, __func__, fingers,
+        FN, __LINE__, __func__, fingers, type,
         config->get_swipe_type_name(swipe_type));
     runproc(command.c_str());
   }
@@ -247,7 +255,7 @@ void gebaar::io::Input::handle_touch_event_up(libinput_event_touch* tev) {
               swipes.size(), touch_swipe_event.fingers);
         } else {
           spdlog::get("main")->info("applying swipe");
-          apply_swipe(swipe_type, touch_swipe_event.fingers);
+          apply_swipe(swipe_type, touch_swipe_event.fingers, swipe_event_group);
         }
       }
     }
@@ -338,7 +346,10 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Add 1 to required distance to get 2 > x > 1
     if (new_scale > 1 + config->settings.pinch_threshold) {
-      runproc(config->pinch_commands[config->PINCH_IN].c_str());
+      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 2);
+      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
+                                 __func__, command.c_str());
+      runproc(command.c_str());
       gesture_pinch_event.executed = true;
     }
   } else {  // Scale Down
@@ -346,7 +357,10 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Substract from 1 to have inverted value for pinch in gesture
     if (gesture_pinch_event.scale < 1 - config->settings.pinch_threshold) {
-      runproc(config->pinch_commands[config->PINCH_OUT].c_str());
+      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 1);
+      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
+                                 __func__, command.c_str());
+      runproc(command.c_str());
       gesture_pinch_event.executed = true;
     }
   }
@@ -366,14 +380,20 @@ void gebaar::io::Input::handle_continouos_pinch(double new_scale) {
     spdlog::get("main")->debug("[{}] at {} - {}: Scale up", FN, __LINE__,
                                __func__);
     if (new_scale >= trigger) {
-      runproc(config->pinch_commands[config->PINCH_IN].c_str());
+      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 2);
+      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
+                                 __func__, command.c_str());
+      runproc(command.c_str());
       inc_step(&gesture_pinch_event.step);
     }
   } else {  // Scale down
     spdlog::get("main")->debug("[{}] at {} - {}: Scale down", FN, __LINE__,
                                __func__);
     if (new_scale <= trigger) {
-      runproc(config->pinch_commands[config->PINCH_OUT].c_str());
+      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 1);
+      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
+                                 __func__, command.c_str());
+      runproc(command.c_str());
       dec_step(&gesture_pinch_event.step);
     }
   }
@@ -453,11 +473,36 @@ void gebaar::io::Input::trigger_swipe_command() {
   double x = gesture_swipe_event.x;
   double y = gesture_swipe_event.y;
   int swipe_type = get_swipe_type(x, y);
-  apply_swipe(swipe_type, gesture_swipe_event.fingers);
+  apply_swipe(swipe_type, gesture_swipe_event.fingers, swipe_event_group);
   spdlog::get("main")->debug("[{}] at {} - {}: swipe type {}", FN, __LINE__,
                              __func__, config->get_swipe_type_name(swipe_type));
   gesture_swipe_event = {};
 }
+
+/**
+ * Handles switch events.
+ *
+ * @param gev Switch Event
+ * 0 == laptop
+ * 1 == tablet
+ */
+void gebaar::io::Input::handle_switch_event(libinput_event_switch* gev)
+{
+  int state = libinput_event_switch_get_switch_state(gev);
+  int state_2 = libinput_event_switch_get_switch(gev);
+  if (state_2 == 2) {
+    if (state == 0) {
+      runproc(config->switch_commands_laptop.c_str());
+      swipe_event_group = "GESTURE";
+    } else {
+      runproc(config->switch_commands_tablet.c_str());
+      swipe_event_group = "TOUCH";
+    }
+    spdlog::get("main")->info("[{}] at {} - switch: {} mode ... executing", FN, __LINE__, swipe_event_group);
+  }
+}
+
+
 
 /**
  * Initialize the input system
@@ -490,25 +535,34 @@ gebaar::io::Input::~Input() { libinput_unref(libinput); }
  */
 bool gebaar::io::Input::gesture_device_exists() {
   swipe_event_group = "";
-  while ((libinput_event = libinput_get_event(libinput)) != nullptr) {
-    auto device = libinput_event_get_device(libinput_event);
-    spdlog::get("main")->debug(
-        "[{}] at {} - {}: Testing capabilities for device {}", FN, __LINE__,
-        __func__, libinput_device_get_name(device));
-    if (libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_GESTURE)) {
-      swipe_event_group = "GESTURE";
-    } else if (libinput_device_has_capability(device,
-                                              LIBINPUT_DEVICE_CAP_TOUCH)) {
-      swipe_event_group = "TOUCH";
-    }
+  if (strcmp(config->settings.interact_type.c_str(), "BOTH") == 0 ) {
+    spdlog::get("main")->debug("[{}] at {} - {}: Interact type set to BOTH", FN, __LINE__, __func__);
+    swipe_event_group = "BOTH";
+  } else if (strcmp(config->settings.interact_type.c_str(), "TOUCH") == 0 || strcmp(config->settings.interact_type.c_str(), "GESTURE") == 0){
+    spdlog::get("main")->debug("[{}] at {} - {}: Interact type set to {}", FN, __LINE__, __func__, config->settings.interact_type.c_str());
+    swipe_event_group = config->settings.interact_type;
+  } else {
+    while ((libinput_event = libinput_get_event(libinput)) != nullptr) {
+      auto device = libinput_event_get_device(libinput_event);
+      spdlog::get("main")->debug(
+          "[{}] at {} - {}: Testing capabilities for device {}", FN, __LINE__,
+          __func__, libinput_device_get_name(device));
+      if (libinput_device_has_capability(device, LIBINPUT_DEVICE_CAP_GESTURE)) {
+        swipe_event_group = "GESTURE";
+      } else if (libinput_device_has_capability(device,
+                                                LIBINPUT_DEVICE_CAP_TOUCH)) {
+        swipe_event_group = "TOUCH";
+      }
 
-    libinput_event_destroy(libinput_event);
-    libinput_dispatch(libinput);
+      libinput_event_destroy(libinput_event);
+      libinput_dispatch(libinput);
 
-    if (swipe_event_group == "GESTURE") {
-      break;
+      if (swipe_event_group == "GESTURE") {
+        break;
+      }
     }
   }
+
   if (swipe_event_group.empty()) {
     spdlog::get("main")->error(
         "[{}] at {} - {}: Gesture/Touch device not found", FN, __LINE__,
@@ -523,6 +577,10 @@ bool gebaar::io::Input::gesture_device_exists() {
 }
 
 bool gebaar::io::Input::check_chosen_event(std::string ev) {
+  if (strcmp(config->settings.interact_type.c_str(), "BOTH") == 0 ) {
+    swipe_event_group = ev;
+    return true;
+  }
   if (swipe_event_group == ev) {
     return true;
   }
@@ -618,7 +676,10 @@ void gebaar::io::Input::handle_event() {
         break;
       case LIBINPUT_EVENT_TABLET_PAD_STRIP:
         break;
+      case LIBINPUT_EVENT_TABLET_PAD_KEY:
+        break;
       case LIBINPUT_EVENT_SWITCH_TOGGLE:
+        handle_switch_event(libinput_event_get_switch_event(libinput_event));
         break;
     }
 

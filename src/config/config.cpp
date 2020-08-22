@@ -55,43 +55,69 @@ void gebaar::config::Config::load_config() {
       }
       for (const auto& table : *command_swipe_table) {
         auto fingers = table->get_as<size_t>("fingers");
+        fingers = fingers.value_or(3);
+        auto type = table->get_as<std::string>("type");
+        type = type.value_or("GESTURE");
         for (std::pair<size_t, std::string> element : SWIPE_COMMANDS) {
-          commands[*fingers][element.second] =
+          commands[*fingers][*type][element.second] =
               table->get_qualified_as<std::string>(element.second).value_or("");
         }
-        settings.gesture_swipe_threshold =
-            config->get_qualified_as<double>("gesture_swipe.settings.threshold")
-                .value_or(0.5);
-        settings.gesture_swipe_one_shot =
-            config->get_qualified_as<bool>("gesture_swipe.settings.one_shot")
-                .value_or(true);
-        settings.gesture_swipe_trigger_on_release =
-            config
-                ->get_qualified_as<bool>(
-                    "gesture_swipe.settings.trigger_on_release")
-                .value_or(true);
-        settings.touch_longswipe_screen_percentage =
-            config
-                ->get_qualified_as<double>(
-                    "touch_swipe.settings.longswipe_screen_percentage")
-                .value_or(LONGSWIPE_SCREEN_PERCENT_DEFAULT);
-
-        /* Pinch settings */
-        pinch_commands[PINCH_IN] =
-            *config->get_qualified_as<std::string>("pinch.commands.two.out");
-        pinch_commands[PINCH_OUT] =
-            *config->get_qualified_as<std::string>("pinch.commands.two.in");
-
-        settings.pinch_threshold =
-            config->get_qualified_as<double>("pinch.settings.threshold")
-                .value_or(0.25);
-        settings.pinch_one_shot =
-            config->get_qualified_as<bool>("pinch.settings.one_shot")
-                .value_or(false);
-
-        loaded = true;
-        spdlog::get("main")->debug("[{}] at {} - Config loaded", FN, __LINE__);
       }
+
+      spdlog::get("main")->debug("[{}] at {} - Generating PINCH_COMMANDS", FN,
+                                 __LINE__);
+      auto pinch_command_table =
+          config->get_table_array_qualified("pinch.commands");
+      if (!pinch_command_table) {
+        spdlog::get("main")->error(
+            "Unable to parse config file '{}' Is it correctly "
+            "formatted?",
+            config_file_path);
+        exit(1);
+      }
+      for (const auto& table : *pinch_command_table) {
+          auto fingers = table->get_as<size_t>("fingers");
+          fingers = fingers.value_or(2);
+          for (std::pair<int, std::string> element : PINCH_COMMANDS) {
+            pinch_commands[*fingers][element.second] =
+                table->get_qualified_as<std::string>(element.second).value_or("");
+          }
+      }
+
+      settings.gesture_swipe_threshold =
+          config->get_qualified_as<double>("settings.gesture_swipe.threshold")
+              .value_or(0.5);
+      settings.gesture_swipe_one_shot =
+          config->get_qualified_as<bool>("settings.gesture_swipe.one_shot")
+              .value_or(true);
+      settings.gesture_swipe_trigger_on_release =
+          config
+              ->get_qualified_as<bool>(
+                  "settings.gesture_swipe.trigger_on_release")
+              .value_or(true);
+      settings.touch_longswipe_screen_percentage =
+          config
+              ->get_qualified_as<double>(
+                  "settings.touch_swipe.longswipe_screen_percentage")
+              .value_or(LONGSWIPE_SCREEN_PERCENT_DEFAULT);
+
+      switch_commands_laptop =
+          *config->get_qualified_as<std::string>("command.switch.laptop");
+      switch_commands_tablet =
+          *config->get_qualified_as<std::string>("command.switch.tablet");
+
+      settings.pinch_threshold =
+          config->get_qualified_as<double>("settings.pinch.threshold")
+              .value_or(0.25);
+      settings.pinch_one_shot =
+          config->get_qualified_as<bool>("settings.pinch.one_shot")
+              .value_or(false);
+
+      settings.interact_type =
+          *config->get_qualified_as<std::string>("settings.interact.type");
+
+      loaded = true;
+      spdlog::get("main")->debug("[{}] at {} - Config loaded", FN, __LINE__);
     }
   }
 }
@@ -141,11 +167,14 @@ std::string gebaar::config::Config::get_swipe_type_name(size_t key) {
 }
 
 std::string gebaar::config::Config::get_command(size_t fingers,
+                                                std::string type,
                                                 size_t swipe_type) {
-  if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
+   if (type == "PINCH") {
+      return pinch_commands[fingers][PINCH_COMMANDS.at(swipe_type)];
+   } else if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
       swipe_type <= MAX_DIRECTION) {
     if (commands.count(fingers)) {
-      return commands[fingers][SWIPE_COMMANDS.at(swipe_type)];
+      return commands[fingers][type][SWIPE_COMMANDS.at(swipe_type)];
     }
   }
   return "";

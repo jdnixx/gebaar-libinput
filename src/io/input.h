@@ -109,7 +109,7 @@ class Input {
 
   void check_multitouch_down_up(std::vector<std::pair<size_t, double>> slots);
 
-  void apply_swipe(size_t swipe_type, size_t fingers);
+  void apply_swipe(size_t swipe_type, size_t fingers, std::string type);
 
   size_t get_swipe_type(double sdx, double sdy);
   /*
@@ -155,6 +155,8 @@ class Input {
   void handle_continouos_pinch(double new_scale);
 
   void handle_pinch_event(libinput_event_gesture* gev, bool begin);
+
+  void handle_switch_event(libinput_event_switch* gev);
 };
 }  // namespace gebaar::io
 

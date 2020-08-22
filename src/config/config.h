@@ -39,6 +39,8 @@ const std::map<size_t, std::string> SWIPE_COMMANDS = {
     {3, "right_up"},       {4, "left"},
     {6, "right"},          {7, "left_down"},
     {8, "down"},           {9, "right_down"}};
+const std::map<int, std::string> PINCH_COMMANDS = {
+    {1, "in"}, {2, "out"}};
 
 namespace gebaar::config {
 class Config {
@@ -58,11 +60,12 @@ class Config {
         bool gesture_swipe_trigger_on_release;
 
         double touch_longswipe_screen_percentage;
+        std::string interact_type;
     } settings;
 
-    enum pinch { PINCH_IN, PINCH_OUT };
-    std::string pinch_commands[10];
-    std::string get_command(size_t fingers, size_t swipe_type);
+    std::string switch_commands_laptop;
+    std::string switch_commands_tablet;
+    std::string get_command(size_t fingers, std::string type, size_t swipe_type);
     std::string get_swipe_type_name(size_t key);
 
 
@@ -73,7 +76,8 @@ class Config {
 
     std::string config_file_path;
     std::shared_ptr<cpptoml::table> config;
-    std::map<size_t, std::map<std::string, std::string>> commands;
+    std::map<int, std::map<std::string, std::string>> pinch_commands;
+    std::map<size_t, std::map<std::string, std::map<std::string, std::string>>> commands;
 };
 }  // namespace gebaar::config
 #endif  // SRC_CONFIG_CONFIG_H_
