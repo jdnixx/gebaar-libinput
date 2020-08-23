@@ -76,7 +76,7 @@ class Config {
 
     std::string config_file_path;
     std::shared_ptr<cpptoml::table> config;
-    std::map<int, std::map<std::string, std::string>> pinch_commands;
+    std::map<int, std::map<std::string, std::map<std::string, std::string>>> pinch_commands;
     std::map<size_t, std::map<std::string, std::map<std::string, std::string>>> commands;
 };
 }  // namespace gebaar::config

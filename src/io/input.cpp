@@ -19,11 +19,20 @@
 #include "input.h"
 #include <poll.h>
 
-static void runproc(const char* cmdline) {
-  int status = std::system(cmdline);
-  if (status != 0)
-    spdlog::get("main")->warn("{} -> Non-zero exit code: {}", cmdline,
-                               WEXITSTATUS(status));
+bool runproc(const char* cmdline) {
+  if (strlen(cmdline) > 0) {
+    spdlog::get("main")->debug(
+        "[{}] at {} - {} - Executing '{}'",
+        FN, __LINE__, __func__, cmdline);
+    int status = std::system(cmdline);
+    if (status != 0) {
+      spdlog::get("main")->warn("{} -> Non-zero exit code: {}", cmdline,
+                                 WEXITSTATUS(status));
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /**
@@ -112,16 +121,10 @@ void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers, std::stri
     command = config->get_command(fingers, "GESTURE", swipe_type);
   }
   spdlog::get("main")->debug(
-      "[{}] at {} - {}: running thing {}", FN, __LINE__,
-      __func__, command);
-  if (command.length() > 0) {
-    spdlog::get("main")->debug(
-        "[{}] at {} - {} - fingers: {}, type: {}, gesture: {} ... "
-        "Executing",
-        FN, __LINE__, __func__, fingers, type,
-        config->get_swipe_type_name(swipe_type));
-    runproc(command.c_str());
-  }
+      "[{}] at {} - {} - fingers: {}, type: {}, gesture: {} ... ",
+      FN, __LINE__, __func__, fingers, type,
+      config->get_swipe_type_name(swipe_type));
+  runproc(command.c_str());
 }
 
 /**
@@ -334,6 +337,7 @@ void gebaar::io::Input::reset_pinch_event() {
   gesture_pinch_event = {};
   gesture_pinch_event.scale = DEFAULT_SCALE;
   gesture_pinch_event.executed = false;
+  gesture_pinch_event.continuous = false;
 }
 
 /**
@@ -346,55 +350,78 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Add 1 to required distance to get 2 > x > 1
     if (new_scale > 1 + config->settings.pinch_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 2);
-      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
-                                 __func__, command.c_str());
-      runproc(command.c_str());
-      gesture_pinch_event.executed = true;
+      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 2);
+      if (runproc(command.c_str())) {
+        spdlog::get("main")->debug(
+            "[{}] at {} - {} - fingers: {}, type: ONESHOT PINCH, gesture: OUT ... ",
+            FN, __LINE__, __func__, gesture_pinch_event.fingers);
+        gesture_pinch_event.executed = true;
+      } else {
+        inc_step(&gesture_pinch_event.step);
+        handle_continuous_pinch(new_scale);
+        gesture_pinch_event.continuous = true;
+      }
     }
   } else {  // Scale Down
-    spdlog::get("main")->debug("[{}] at {} - {}: Scale down", FN, __LINE__,
-                               __func__);
+    spdlog::get("main")->debug("[{}] at {} - {}: Scale down {} < 1 - {}", FN, __LINE__,
+                               __func__, new_scale, config->settings.pinch_threshold);
     // Substract from 1 to have inverted value for pinch in gesture
     if (gesture_pinch_event.scale < 1 - config->settings.pinch_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 1);
-      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
-                                 __func__, command.c_str());
-      runproc(command.c_str());
-      gesture_pinch_event.executed = true;
+      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 1);
+
+      if (runproc(command.c_str())) {
+        spdlog::get("main")->debug(
+            "[{}] at {} - {} - fingers: {}, type: ONESHOT PINCH, gesture: IN ... ",
+            FN, __LINE__, __func__, gesture_pinch_event.fingers);
+        gesture_pinch_event.executed = true;
+      } else {
+        dec_step(&gesture_pinch_event.step);
+        handle_continuous_pinch(new_scale);
+        gesture_pinch_event.continuous = true;
+      }
     }
   }
 }
 
 /**
- * Pinch continous gesture handle
+ * Pinch continuous gesture handle
  * Calculates the trigger value according to current step
  * @param new_scale last reported scale between the fingers
  */
-void gebaar::io::Input::handle_continouos_pinch(double new_scale) {
+void gebaar::io::Input::handle_continuous_pinch(double new_scale) {
   int step = gesture_pinch_event.step == 0 ? gesture_pinch_event.step + 1
                                            : gesture_pinch_event.step;
   double trigger = 1 + (config->settings.pinch_threshold * step);
-
+  spdlog::get("main")->debug(
+      "[{}] at {} - {} - scale: {} gesture_scale: {} trigger: {}",
+      FN, __LINE__, __func__, new_scale, gesture_pinch_event.scale, trigger);
   if (new_scale > gesture_pinch_event.scale) {  // Scale up
     spdlog::get("main")->debug("[{}] at {} - {}: Scale up", FN, __LINE__,
                                __func__);
     if (new_scale >= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 2);
-      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
-                                 __func__, command.c_str());
-      runproc(command.c_str());
-      inc_step(&gesture_pinch_event.step);
+      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 2);
+      spdlog::get("main")->debug(
+          "[{}] at {} - {} - fingers: {}, type: CONTINUOUS PINCH, gesture: OUT ... ",
+          FN, __LINE__, __func__, gesture_pinch_event.fingers);
+      if (runproc(command.c_str())) {
+        inc_step(&gesture_pinch_event.step);
+      } else {
+        gesture_pinch_event.executed = true;
+      }
     }
   } else {  // Scale down
     spdlog::get("main")->debug("[{}] at {} - {}: Scale down", FN, __LINE__,
                                __func__);
     if (new_scale <= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "PINCH", 1);
-      spdlog::get("main")->debug("[{}] at {} - {}: running {}", FN, __LINE__,
-                                 __func__, command.c_str());
-      runproc(command.c_str());
-      dec_step(&gesture_pinch_event.step);
+      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 1);
+      spdlog::get("main")->debug(
+          "[{}] at {} - {} - fingers: {}, type: CONTINUOUS PINCH, gesture: IN ... ",
+          FN, __LINE__, __func__, gesture_pinch_event.fingers);
+      if (runproc(command.c_str())) {
+        dec_step(&gesture_pinch_event.step);
+      } else {
+        gesture_pinch_event.executed = true;
+      }
     }
   }
 }
@@ -412,9 +439,11 @@ void gebaar::io::Input::handle_pinch_event(libinput_event_gesture* gev,
     gesture_pinch_event.fingers = libinput_event_gesture_get_finger_count(gev);
   } else {
     double new_scale = libinput_event_gesture_get_scale(gev);
-    if (config->settings.pinch_one_shot && !gesture_pinch_event.executed)
+    if (!gesture_pinch_event.executed && !gesture_pinch_event.continuous) {
       handle_one_shot_pinch(new_scale);
-    if (!config->settings.pinch_one_shot) handle_continouos_pinch(new_scale);
+    } else if (!gesture_pinch_event.executed && gesture_pinch_event.continuous) {
+      handle_continuous_pinch(new_scale);
+    }
     gesture_pinch_event.scale = new_scale;
   }
 }
@@ -492,10 +521,12 @@ void gebaar::io::Input::handle_switch_event(libinput_event_switch* gev)
   int state_2 = libinput_event_switch_get_switch(gev);
   if (state_2 == 2) {
     if (state == 0) {
-      runproc(config->switch_commands_laptop.c_str());
+      std::string command = config->switch_commands_laptop;
+      runproc(command.c_str());
       swipe_event_group = "GESTURE";
     } else {
-      runproc(config->switch_commands_tablet.c_str());
+      std::string command = config->switch_commands_laptop;
+      runproc(command.c_str());
       swipe_event_group = "TOUCH";
     }
     spdlog::get("main")->info("[{}] at {} - switch: {} mode ... executing", FN, __LINE__, swipe_event_group);
@@ -621,8 +652,6 @@ void gebaar::io::Input::handle_event() {
                            false);
         break;
       case LIBINPUT_EVENT_GESTURE_PINCH_END:
-        handle_pinch_event(libinput_event_get_gesture_event(libinput_event),
-                           false);
         break;
       case LIBINPUT_EVENT_NONE:
         break;

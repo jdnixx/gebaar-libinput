@@ -78,8 +78,10 @@ void gebaar::config::Config::load_config() {
       for (const auto& table : *pinch_command_table) {
           auto fingers = table->get_as<size_t>("fingers");
           fingers = fingers.value_or(2);
+          auto type = table->get_as<std::string>("type");
+          type = type.value_or("ONESHOT");
           for (std::pair<int, std::string> element : PINCH_COMMANDS) {
-            pinch_commands[*fingers][element.second] =
+            pinch_commands[*fingers][*type][element.second] =
                 table->get_qualified_as<std::string>(element.second).value_or("");
           }
       }
@@ -109,9 +111,6 @@ void gebaar::config::Config::load_config() {
       settings.pinch_threshold =
           config->get_qualified_as<double>("settings.pinch.threshold")
               .value_or(0.25);
-      settings.pinch_one_shot =
-          config->get_qualified_as<bool>("settings.pinch.one_shot")
-              .value_or(false);
 
       settings.interact_type =
           *config->get_qualified_as<std::string>("settings.interact.type");
@@ -169,8 +168,8 @@ std::string gebaar::config::Config::get_swipe_type_name(size_t key) {
 std::string gebaar::config::Config::get_command(size_t fingers,
                                                 std::string type,
                                                 size_t swipe_type) {
-   if (type == "PINCH") {
-      return pinch_commands[fingers][PINCH_COMMANDS.at(swipe_type)];
+   if (type == "ONESHOT" || type == "CONTINUOUS") {
+      return pinch_commands[fingers][type][PINCH_COMMANDS.at(swipe_type)];
    } else if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
       swipe_type <= MAX_DIRECTION) {
     if (commands.count(fingers)) {
