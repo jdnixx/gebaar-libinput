@@ -46,13 +46,6 @@ void gebaar::config::Config::load_config() {
                                  __LINE__);
       auto command_swipe_table =
           config->get_table_array_qualified("swipe.commands");
-      if (!command_swipe_table) {
-        spdlog::get("main")->error(
-            "Unable to parse config file '{}' Is it correctly "
-            "formatted?",
-            config_file_path);
-        exit(1);
-      }
       for (const auto& table : *command_swipe_table) {
         auto fingers = table->get_as<size_t>("fingers");
         fingers = fingers.value_or(3);
@@ -68,13 +61,6 @@ void gebaar::config::Config::load_config() {
                                  __LINE__);
       auto pinch_command_table =
           config->get_table_array_qualified("pinch.commands");
-      if (!pinch_command_table) {
-        spdlog::get("main")->error(
-            "Unable to parse config file '{}' Is it correctly "
-            "formatted?",
-            config_file_path);
-        exit(1);
-      }
       for (const auto& table : *pinch_command_table) {
           auto fingers = table->get_as<size_t>("fingers");
           fingers = fingers.value_or(2);
@@ -85,6 +71,11 @@ void gebaar::config::Config::load_config() {
                 table->get_qualified_as<std::string>(element.second).value_or("");
           }
       }
+
+      switch_commands_laptop =
+          *config->get_qualified_as<std::string>("switch.commands.laptop");
+      switch_commands_tablet =
+          *config->get_qualified_as<std::string>("switch.commands.tablet");
 
       settings.gesture_swipe_threshold =
           config->get_qualified_as<double>("settings.gesture_swipe.threshold")
@@ -102,11 +93,6 @@ void gebaar::config::Config::load_config() {
               ->get_qualified_as<double>(
                   "settings.touch_swipe.longswipe_screen_percentage")
               .value_or(LONGSWIPE_SCREEN_PERCENT_DEFAULT);
-
-      switch_commands_laptop =
-          *config->get_qualified_as<std::string>("command.switch.laptop");
-      switch_commands_tablet =
-          *config->get_qualified_as<std::string>("command.switch.tablet");
 
       settings.pinch_threshold =
           config->get_qualified_as<double>("settings.pinch.threshold")
