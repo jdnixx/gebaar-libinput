@@ -1,5 +1,8 @@
+_Forked from Coffee2CodeNL/gebaar-libinput since original repo has been unmaintained for over a year, yet this is NOT OFFICIAL repo!_
+
 ***This fork merges the following into Gebaar***
 - https://github.com/gabrielstedman/gebaar-libinput adding touch support and pinch in/out gestures
+- https://github.com/Coffee2CodeNL/gebaar-libinput/pull/25 adding error catching when parsing options
 
 ***Other changes include:***
 - Allowing different commands to be run depending on touchpad or touchscreen gestures
@@ -8,7 +11,6 @@
 
 Gebaar
 =========
-Forked from Coffee2CodeNL/gebaar-libinput since original repo unmaintained for half a year, yet this is NOT OFFICIAL repo!
 
 WM Independent Touchpad Gesture Daemon for libinput
 
