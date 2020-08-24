@@ -133,20 +133,20 @@ down = "echo long_swipe_down"
 left = ""
 right = ""
 
-[pinch.commands.two]
+[pinch.commands]
+type = "ONESHOT"
 in = "xdotool key Control_L+equal"
 out = "xdotool key Control_L+minus"
 
-[pinch.settings]
+[settings.pinch]
 threshold=0.25
-one_shot=false
 
-[gesture_swipe.settings]
+[settings.gesture_swipe]
 threshold = 0.5
 one_shot = true
 trigger_on_release = false
 
-[touch_swipe.settings]
+[settings.touch_swipe]
 longswipe_screen_percentage = 95
 ```
 
@@ -215,7 +215,7 @@ trigger_on_release = false
 <details>
 <summary>~/.config/systemd/user/gebaard.service</summary>
 
-```sh
+```ini
 [Unit]
 Description=Gebaar Daemon
 Documentation=https://github.com/NICHOLAS85/gebaar-libinput
@@ -238,7 +238,7 @@ $ systemctl --user --now enable gebaard
 <details>
 <summary>~/.config/systemd/user/gebaard-watcher.service</summary>
 
-```sh
+```ini
 [Unit]
 Description=Gebaar restarter
 
@@ -260,7 +260,7 @@ $ systemctl --user enable gebaard-watcher
 <details>
 <summary>~/.config/systemd/user/gebaard-watcher.path</summary>
 
-```sh
+```ini
 [Path]
 PathModified=%h/.config/gebaar/gebaard.toml
 
