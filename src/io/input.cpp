@@ -620,7 +620,7 @@ void gebaar::io::Input::handle_switch_event(libinput_event_switch* gev)
 {
   int state = libinput_event_switch_get_switch_state(gev);
   int state_2 = libinput_event_switch_get_switch(gev);
-  spdlog::get("main")->debug("[{}] at {} - state: {}, state_2: {}", FN, __LINE__, state);
+  spdlog::get("main")->debug("[{}] at {} - state: {}, state_2: {}", FN, __LINE__, state, state_2);
   if (state_2 == 2) {
     if (state == 0) {
       spdlog::get("main")->debug("[{}] at {} - Laptop Switch", FN, __LINE__);
@@ -629,7 +629,7 @@ void gebaar::io::Input::handle_switch_event(libinput_event_switch* gev)
       swipe_event_group = "GESTURE";
     } else {
       spdlog::get("main")->debug("[{}] at {} - Tablet Switch", FN, __LINE__);
-      std::string command = config->switch_commands_laptop;
+      std::string command = config->switch_commands_tablet;
       runproc(command.c_str());
       swipe_event_group = "TOUCH";
     }
