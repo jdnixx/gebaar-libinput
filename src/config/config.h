@@ -39,8 +39,9 @@ const std::map<size_t, std::string> SWIPE_COMMANDS = {
     {3, "right_up"},       {4, "left"},
     {6, "right"},          {7, "left_down"},
     {8, "down"},           {9, "right_down"}};
-const std::map<int, std::string> PINCH_COMMANDS = {
-    {1, "in"}, {2, "out"}};
+const std::map<size_t, std::string> PINCH_COMMANDS = {
+    {1, "in"}, {2, "out"},
+    {3, "rotate_left"}, {4, "rotate_right"}};
 
 namespace gebaar::config {
 class Config {
@@ -54,6 +55,7 @@ class Config {
     struct settings {
         bool pinch_one_shot;
         double pinch_threshold;
+        double rotate_threshold;
 
         bool gesture_swipe_one_shot;
         double gesture_swipe_threshold;
