@@ -55,6 +55,7 @@ struct gesture_pinch_event {
 
   bool executed;
   bool continuous;
+  bool rotating;
   int step;
 };
 
@@ -154,6 +155,10 @@ class Input {
   void handle_one_shot_pinch(double new_scale);
 
   void handle_continuous_pinch(double new_scale);
+
+  void handle_one_shot_rotate(double new_angle);
+
+  void handle_continuous_rotate(double new_angle);
 
   void handle_pinch_event(libinput_event_gesture* gev, bool begin);
 

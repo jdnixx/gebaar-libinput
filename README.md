@@ -7,6 +7,7 @@ _Forked from Coffee2CodeNL/gebaar-libinput since original repo has been unmainta
 ***Other changes include:***
 - Allowing different commands to be run depending on touchpad or touchscreen gestures
 - Adding support to run commands on switch events for 2 in 1 laptops
+- Adding support for pinch and rotate gestures
 - Improve configuration specificity and options
 
 Gebaar
@@ -62,11 +63,13 @@ left =       string
 right =      string
 
 [[pinch.commands]]
-fingers = integer (default 2)
-type =    string (ONESHOT|CONTINUOUS) (default ONESHOT)
+fingers =      integer (default 2)
+type =         string (ONESHOT|CONTINUOUS) (default ONESHOT)
 # Entries below run string based on direction
-in =      string
-out =     string
+in =           string
+out =          string
+rotate_left =  string
+rotate_right = string
 
 [switch.commands]
 # Entries below run string when 2 in 1 devices switch modes
@@ -75,6 +78,7 @@ tablet = string
 
 [settings]
 pinch.threshold = double (default 0.25)
+rotate.threshold = double (default 20)
 interact.type =   string (TOUCH|GESTURE|BOTH) (default automatic)
 gesture_swipe.threshold = double (default 0.5)
 gesture_swipe.one_shot =  bool (default true)
@@ -85,6 +89,8 @@ touch_swipe.longswipe_screen_percentage = double (default 70)
 * `pinch.commands.type` key determines if a pinch is triggered once (ONESHOT) or continuously (CONTINUOUS) as fingers get closer or farther apart.
 * `settings.pinch.threshold` key sets the distance between fingers where it should trigger.
   Defaults to `0.25` which means fingers should travel exactly 25% distance from their initial position.
+* `settings.rotate.threshold` key sets angle between fingers where it should trigger.
+  Defaults to `20` which means fingers must travel 20 degrees from their initial position.
 * `interact.type` key determines whether touchscreen (TOUCH) or trackpad (GESTURE) gestures are detected. In 2 and 1 devices, this key is set automatically depending on what mode the device is currently in, BOTH supersedes this behavior.
 * `settings.gesture_swipe.threshold` sets the percentage fingers should travel to trigger a swipe.
 * `settings.gesture_swipe.one_shot` key determines whether gestures are triggered once (ONESHOT) or continuously (CONTINOUS) as fingers travel across the trackpad.
@@ -199,12 +205,18 @@ type = "ONESHOT"
 in = "~/bin/firefoxorbust"
 out = "xdotool key ctrl+shift+t"
 
+[[pinch.commands]]
+type = "CONTINUOUS"
+rotate_left = 'qdbus org.kde.kglobalaccel /component/kmix invokeShortcut "increase_volume"'
+rotate_right = 'qdbus org.kde.kglobalaccel /component/kmix invokeShortcut "decrease_volume"'
+
 [switch.commands]
 laptop = "pkill onboard; pkill screenrotator;"
 tablet = "onboard & screenrotator &"
 
 [settings]
 pinch.threshold = 0.13
+rotate.threshold = 20
 interact.type = "BOTH"
 
 [settings.gesture_swipe]
@@ -270,7 +282,7 @@ PathModified=%h/.config/gebaar/gebaard.toml
 WantedBy=default.target
 ```
 
-Once the file is in place simply run the following to automatically restart Gebaar  when it's configuration file is modified.
+Once the file is in place simply run the following to automatically restart Gebaar when it's configuration file is modified.
 ```sh
 $ systemctl --user enable gebaard-watcher.path
 ```
@@ -279,10 +291,10 @@ $ systemctl --user enable gebaard-watcher.path
 ### State of the project
 
 - [x] Receiving swipe events from libinput
-- [x] Swipe gesture have trigger treshold
+- [x] Swipe gesture have trigger threshold
 - [x] Receiving pinch/zoom events from libinput
-- [x] Support continous pinch
-- [ ] Support pinch-and-rotate gestures
+- [x] Support continuous pinch
+- [x] Support pinch-and-rotate gestures
 - [x] Support touchscreen devices
 - [ ] Receiving rotation events from libinput
 - [x] Receiving switch events from libinput

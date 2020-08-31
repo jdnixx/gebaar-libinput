@@ -98,6 +98,10 @@ void gebaar::config::Config::load_config() {
           config->get_qualified_as<double>("settings.pinch.threshold")
               .value_or(0.25);
 
+      settings.rotate_threshold =
+          config->get_qualified_as<double>("settings.rotate.threshold")
+              .value_or(20);
+
       settings.interact_type =
           *config->get_qualified_as<std::string>("settings.interact.type");
 
