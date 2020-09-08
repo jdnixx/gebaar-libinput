@@ -46,14 +46,18 @@ void gebaar::config::Config::load_config() {
                                  __LINE__);
       auto command_swipe_table =
           config->get_table_array_qualified("swipe.commands");
-      for (const auto& table : *command_swipe_table) {
-        auto fingers = table->get_as<size_t>("fingers");
-        fingers = fingers.value_or(3);
-        auto type = table->get_as<std::string>("type");
-        type = type.value_or("GESTURE");
-        for (std::pair<size_t, std::string> element : SWIPE_COMMANDS) {
-          commands[*fingers][*type][element.second] =
-              table->get_qualified_as<std::string>(element.second).value_or("");
+      if (command_swipe_table == nullptr) {
+        spdlog::get("main")->debug("[{}] at {} - command_swipe_table empty", FN, __LINE__);
+      } else {
+        for (const auto& table : *command_swipe_table) {
+          auto fingers = table->get_as<size_t>("fingers");
+          fingers = fingers.value_or(3);
+          auto type = table->get_as<std::string>("type");
+          type = type.value_or("GESTURE");
+          for (std::pair<size_t, std::string> element : SWIPE_COMMANDS) {
+            commands[*fingers][*type][element.second] =
+                table->get_qualified_as<std::string>(element.second).value_or("");
+          }
         }
       }
 
@@ -61,7 +65,10 @@ void gebaar::config::Config::load_config() {
                                  __LINE__);
       auto pinch_command_table =
           config->get_table_array_qualified("pinch.commands");
-      for (const auto& table : *pinch_command_table) {
+      if (pinch_command_table == nullptr) {
+        spdlog::get("main")->debug("[{}] at {} - pinch_command_table empty", FN, __LINE__);
+      } else {
+        for (const auto& table : *pinch_command_table) {
           auto fingers = table->get_as<size_t>("fingers");
           fingers = fingers.value_or(2);
           auto type = table->get_as<std::string>("type");
@@ -70,6 +77,7 @@ void gebaar::config::Config::load_config() {
             pinch_commands[*fingers][*type][element.second] =
                 table->get_qualified_as<std::string>(element.second).value_or("");
           }
+        }
       }
 
       switch_commands_laptop =
