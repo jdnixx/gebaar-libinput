@@ -18,7 +18,7 @@
 
 #include "config.h"
 #include <zconf.h>
-#include "../util.h"
+#include "utils/string-from-char.h"
 #define FN "config"
 
 /**

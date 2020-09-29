@@ -24,7 +24,7 @@
 #include <libinput.h>
 #include <cxxopts.hpp>
 #include "config/config.h"
-#include "daemonizer.h"
+#include "daemon/daemonizer.h"
 #include "io/input.h"
 #include "spdlog/fmt/ostr.h"
 #include "spdlog/sinks/stdout_sinks.h"

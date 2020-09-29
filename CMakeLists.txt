@@ -5,26 +5,29 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic -pthread")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-add_executable(gebaard
-        src/main.cpp
-        src/io/input.cpp
-        src/io/input.h
-        src/config/config.cpp
-        src/config/config.h
-        src/daemonizer.cpp
-        src/daemonizer.h
-        src/util.cpp
-        src/util.h)
+find_package(Libinput REQUIRED)
+find_package(udev REQUIRED)
 
-find_package(PkgConfig)
-if (PKG_CONFIG_FOUND)
-    pkg_search_module(LIBINPUT REQUIRED libinput)
-endif ()
+include_directories(${PROJECT_SOURCE_DIR}/src)
+file(GLOB_RECURSE SOURCE_FILES RELATIVE ${PROJECT_SOURCE_DIR} src/*.h src/*.cpp)
 
-find_package(udev)
+add_executable(gebaard ${SOURCE_FILES})
 
-target_link_libraries(gebaard ${LIBINPUT_LIBRARIES} ${UDEV_LIBRARIES} stdc++fs)
-target_include_directories(gebaard PUBLIC ${LIBINPUT_INCLUDE_DIRS} ${UDEV_INCLUDE_DIRS} libs/cxxopts/include libs/cpptoml/include libs/spdlog/include)
-target_compile_options(gebaard PUBLIC ${LIBINPUT_CFLAGS_OTHER} ${UDEV_CFLAGS_OTHER})
+target_link_libraries(gebaard
+  ${LIBINPUT_LIBRARIES}
+  ${UDEV_LIBRARIES}
+  stdc++fs
+)
+target_include_directories(gebaard PUBLIC
+  ${LIBINPUT_INCLUDE_DIRS}
+  ${UDEV_INCLUDE_DIRS}
+  libs/cxxopts/include
+  libs/cpptoml/include
+  libs/spdlog/include
+)
+target_compile_options(gebaard PUBLIC
+  ${LIBINPUT_CFLAGS_OTHER}
+  ${UDEV_CFLAGS_OTHER}
+)
 
 install(TARGETS gebaard DESTINATION bin)
