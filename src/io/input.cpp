@@ -756,6 +756,7 @@ void gebaar::io::Input::handle_event() {
         break;
       case LIBINPUT_EVENT_GESTURE_PINCH_END:
         break;
+      /*
       case LIBINPUT_EVENT_NONE:
         break;
       case LIBINPUT_EVENT_DEVICE_ADDED:
@@ -772,6 +773,7 @@ void gebaar::io::Input::handle_event() {
         break;
       case LIBINPUT_EVENT_POINTER_AXIS:
         break;
+      */
       case LIBINPUT_EVENT_TOUCH_DOWN:
         if (check_chosen_event("TOUCH")) {
           handle_touch_event_down(
@@ -789,7 +791,7 @@ void gebaar::io::Input::handle_event() {
               libinput_event_get_touch_event(libinput_event));
         }
         break;
-        break;
+      /*
       case LIBINPUT_EVENT_TOUCH_CANCEL:
         break;
       case LIBINPUT_EVENT_TOUCH_FRAME:
@@ -810,8 +812,11 @@ void gebaar::io::Input::handle_event() {
         break;
       case LIBINPUT_EVENT_TABLET_PAD_KEY:
         break;
+      */
       case LIBINPUT_EVENT_SWITCH_TOGGLE:
         handle_switch_event(libinput_event_get_switch_event(libinput_event));
+        break;
+      default:
         break;
     }
 
