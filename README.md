@@ -1,4 +1,4 @@
-_Forked from Coffee2CodeNL/gebaar-libinput since original repo has been unmaintained for over a year, yet this is NOT OFFICIAL repo!_
+_Forked from https://github.com/Coffee2CodeNL/gebaar-libinput since original repo has been unmaintained for over a year, yet this is NOT OFFICIAL repo!_
 
 ***This fork merges the following into Gebaar***
 - https://github.com/gabrielstedman/gebaar-libinput adding touch support and pinch in/out gestures
@@ -9,6 +9,7 @@ _Forked from Coffee2CodeNL/gebaar-libinput since original repo has been unmainta
 - Adding support to run commands on switch events for 2 in 1 laptops
 - Adding support for pinch and rotate gestures
 - Improve configuration specificity and options
+- [And various miscellaneous changes](https://github.com/NICHOLAS85/gebaar-libinput/commits?author=NICHOLAS85)
 
 Gebaar
 =========
