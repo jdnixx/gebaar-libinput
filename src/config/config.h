@@ -38,10 +38,15 @@ const std::map<size_t, std::string> SWIPE_COMMANDS = {
     {1, "left_up"},        {2, "up"},
     {3, "right_up"},       {4, "left"},
     {6, "right"},          {7, "left_down"},
-    {8, "down"},           {9, "right_down"}};
+    {8, "down"},           {9, "right_down"}
+};
 const std::map<size_t, std::string> PINCH_COMMANDS = {
-    {1, "in"}, {2, "out"},
-    {3, "rotate_left"}, {4, "rotate_right"}};
+    {1, "in"},             {2, "out"},
+    {3, "rotate_left"},    {4, "rotate_right"}
+};
+const std::map<size_t, std::string> SWITCH_COMMANDS = {
+    {0, "laptop"},         {1, "tablet"}
+};
 
 namespace gebaar::config {
 class Config {
@@ -65,9 +70,9 @@ class Config {
         std::string interact_type;
     } settings;
 
-    std::string switch_commands_laptop;
-    std::string switch_commands_tablet;
-    std::string get_command(size_t fingers, std::string type, size_t swipe_type);
+    std::string get_swipe_command(size_t fingers, std::string type, size_t swipe_type);
+    std::string get_pinch_command(size_t fingers, std::string type, size_t swipe_type);
+    std::string get_switch_command(size_t key);
     std::string get_swipe_type_name(size_t key);
 
 
@@ -78,8 +83,9 @@ class Config {
 
     std::string config_file_path;
     std::shared_ptr<cpptoml::table> config;
-    std::map<int, std::map<std::string, std::map<std::string, std::string>>> pinch_commands;
-    std::map<size_t, std::map<std::string, std::map<std::string, std::string>>> commands;
+    std::map<size_t, std::map<std::string, std::map<std::string, std::string>>> swipe_commands;
+    std::map<size_t, std::map<std::string, std::map<std::string, std::string>>> pinch_commands;
+    std::map<std::string, std::string> switch_commands;
 };
 }  // namespace gebaar::config
 #endif  // SRC_CONFIG_CONFIG_H_

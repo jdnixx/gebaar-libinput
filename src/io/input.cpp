@@ -116,9 +116,9 @@ bool gebaar::io::Input::test_above_threshold(size_t swipe_type, double length,
 void gebaar::io::Input::apply_swipe(size_t swipe_type, size_t fingers, std::string type) {
   std::string command;
   if (strcmp(type.c_str(), "TOUCH") == 0) {
-    command = config->get_command(fingers, "TOUCH", swipe_type);
+    command = config->get_swipe_command(fingers, "TOUCH", swipe_type);
   } else {
-    command = config->get_command(fingers, "GESTURE", swipe_type);
+    command = config->get_swipe_command(fingers, "GESTURE", swipe_type);
   }
   spdlog::get("main")->debug(
       "[{}] at {} - {} - fingers: {}, type: {}, gesture: {} ... ",
@@ -351,7 +351,7 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__);
     // Add 1 to required distance to get 2 > x > 1
     if (new_scale > 1 + config->settings.pinch_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 2);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "ONESHOT", 2);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: ONESHOT, gesture: PINCH OUT ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -368,7 +368,7 @@ void gebaar::io::Input::handle_one_shot_pinch(double new_scale) {
                                __func__, new_scale, config->settings.pinch_threshold);
     // Substract from 1 to have inverted value for pinch in gesture
     if (gesture_pinch_event.scale < 1 - config->settings.pinch_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 1);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "ONESHOT", 1);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: ONESHOT, gesture: PINCH IN ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -399,7 +399,7 @@ void gebaar::io::Input::handle_continuous_pinch(double new_scale) {
     spdlog::get("main")->debug("[{}] at {} - {}: Scale up", FN, __LINE__,
                                __func__);
     if (new_scale >= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 2);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "CONTINUOUS", 2);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: CONTINUOUS, gesture: PINCH OUT ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -413,7 +413,7 @@ void gebaar::io::Input::handle_continuous_pinch(double new_scale) {
     spdlog::get("main")->debug("[{}] at {} - {}: Scale down", FN, __LINE__,
                                __func__);
     if (new_scale <= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 1);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "CONTINUOUS", 1);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: CONTINUOUS, gesture: PINCH IN ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -440,7 +440,7 @@ void gebaar::io::Input::handle_one_shot_rotate(double new_angle) {
     spdlog::get("main")->debug("[{}] at {} - {}: Rotate right", FN, __LINE__,
                                __func__);
     if (new_angle > config->settings.rotate_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 4);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "ONESHOT", 4);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: ONESHOT, gesture: ROTATE RIGHT ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -457,7 +457,7 @@ void gebaar::io::Input::handle_one_shot_rotate(double new_angle) {
     spdlog::get("main")->debug("[{}] at {} - {}: Rotate left", FN, __LINE__,
                                __func__);
     if (abs(new_angle) > config->settings.rotate_threshold) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "ONESHOT", 3);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "ONESHOT", 3);
       spdlog::get("main")->debug(
           "[{}] at {} - {} - fingers: {}, type: ONESHOT, gesture: ROTATE LEFT ... ",
           FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -489,7 +489,7 @@ void gebaar::io::Input::handle_continuous_rotate(double new_angle) {
     spdlog::get("main")->debug("[{}] at {} - {}: Rotate right", FN, __LINE__,
                                __func__);
     if (new_angle >= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 4);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "CONTINUOUS", 4);
       spdlog::get("main")->debug(
          "[{}] at {} - {} - fingers: {}, type: CONTINUOUS, gesture: ROTATE RIGHT ... ",
          FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -503,7 +503,7 @@ void gebaar::io::Input::handle_continuous_rotate(double new_angle) {
     spdlog::get("main")->debug("[{}] at {} - {}: Rotate left", FN, __LINE__,
                                __func__);
     if (new_angle <= trigger) {
-      std::string command = config->get_command(gesture_pinch_event.fingers, "CONTINUOUS", 3);
+      std::string command = config->get_pinch_command(gesture_pinch_event.fingers, "CONTINUOUS", 3);
       spdlog::get("main")->debug(
         "[{}] at {} - {} - fingers: {}, type: CONTINUOUS, gesture: ROTATE LEFT ... ",
         FN, __LINE__, __func__, gesture_pinch_event.fingers);
@@ -624,15 +624,13 @@ void gebaar::io::Input::handle_switch_event(libinput_event_switch* gev)
   if (state_2 == 2) {
     if (state == 0) {
       spdlog::get("main")->debug("[{}] at {} - Laptop Switch", FN, __LINE__);
-      std::string command = config->switch_commands_laptop;
-      runproc(command.c_str());
       swipe_event_group = "GESTURE";
     } else {
       spdlog::get("main")->debug("[{}] at {} - Tablet Switch", FN, __LINE__);
-      std::string command = config->switch_commands_tablet;
-      runproc(command.c_str());
       swipe_event_group = "TOUCH";
     }
+    std::string command = config->get_switch_command(state);
+    runproc(command.c_str());
   }
 }
 

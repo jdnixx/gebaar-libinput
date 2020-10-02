@@ -211,7 +211,7 @@ type = "CONTINUOUS"
 rotate_left = 'qdbus org.kde.kglobalaccel /component/kmix invokeShortcut "increase_volume"'
 rotate_right = 'qdbus org.kde.kglobalaccel /component/kmix invokeShortcut "decrease_volume"'
 
-[switch.commands]
+[[switch.commands]]
 laptop = "pkill onboard; pkill screenrotator;"
 tablet = "onboard & screenrotator &"
 

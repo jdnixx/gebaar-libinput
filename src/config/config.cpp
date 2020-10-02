@@ -44,18 +44,18 @@ void gebaar::config::Config::load_config() {
       }
       spdlog::get("main")->debug("[{}] at {} - Generating SWIPE_COMMANDS", FN,
                                  __LINE__);
-      auto command_swipe_table =
+      auto swipe_command_table =
           config->get_table_array_qualified("swipe.commands");
-      if (command_swipe_table == nullptr) {
-        spdlog::get("main")->debug("[{}] at {} - command_swipe_table empty", FN, __LINE__);
+      if (swipe_command_table == nullptr) {
+        spdlog::get("main")->debug("[{}] at {} - swipe_command_table empty", FN, __LINE__);
       } else {
-        for (const auto& table : *command_swipe_table) {
+        for (const auto& table : *swipe_command_table) {
           auto fingers = table->get_as<size_t>("fingers");
           fingers = fingers.value_or(3);
           auto type = table->get_as<std::string>("type");
           type = type.value_or("GESTURE");
           for (std::pair<size_t, std::string> element : SWIPE_COMMANDS) {
-            commands[*fingers][*type][element.second] =
+            swipe_commands[*fingers][*type][element.second] =
                 table->get_qualified_as<std::string>(element.second).value_or("");
           }
         }
@@ -73,17 +73,27 @@ void gebaar::config::Config::load_config() {
           fingers = fingers.value_or(2);
           auto type = table->get_as<std::string>("type");
           type = type.value_or("ONESHOT");
-          for (std::pair<int, std::string> element : PINCH_COMMANDS) {
+          for (std::pair<size_t, std::string> element : PINCH_COMMANDS) {
             pinch_commands[*fingers][*type][element.second] =
                 table->get_qualified_as<std::string>(element.second).value_or("");
           }
         }
       }
 
-      switch_commands_laptop =
-          *config->get_qualified_as<std::string>("switch.commands.laptop");
-      switch_commands_tablet =
-          *config->get_qualified_as<std::string>("switch.commands.tablet");
+      spdlog::get("main")->debug("[{}] at {} - Generating SWITCH_COMMANDS", FN,
+                                 __LINE__);
+      auto switch_command_table =
+          config->get_table_array_qualified("switch.commands");
+      if (switch_command_table == nullptr) {
+        spdlog::get("main")->debug("[{}] at {} - switch_command_table empty", FN, __LINE__);
+      } else {
+        for (const auto& table : *switch_command_table) {
+          for (std::pair<size_t, std::string> element : SWITCH_COMMANDS) {
+            switch_commands[element.second] =
+                table->get_qualified_as<std::string>(element.second).value_or("");
+          }
+        }
+      }
 
       settings.gesture_swipe_threshold =
           config->get_qualified_as<double>("settings.gesture_swipe.threshold")
@@ -163,16 +173,27 @@ std::string gebaar::config::Config::get_swipe_type_name(size_t key) {
   return SWIPE_COMMANDS.at(key);
 }
 
-std::string gebaar::config::Config::get_command(size_t fingers,
+std::string gebaar::config::Config::get_swipe_command(size_t fingers,
                                                 std::string type,
                                                 size_t swipe_type) {
-   if (type == "ONESHOT" || type == "CONTINUOUS") {
-      return pinch_commands[fingers][type][PINCH_COMMANDS.at(swipe_type)];
-   } else if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
+    if (fingers > 0 && swipe_type >= MIN_DIRECTION &&
       swipe_type <= MAX_DIRECTION) {
-    if (commands.count(fingers)) {
-      return commands[fingers][type][SWIPE_COMMANDS.at(swipe_type)];
+    if (swipe_commands.count(fingers)) {
+      return swipe_commands[fingers][type][SWIPE_COMMANDS.at(swipe_type)];
     }
   }
   return "";
+}
+
+std::string gebaar::config::Config::get_pinch_command(size_t fingers,
+                                                std::string type,
+                                                size_t swipe_type) {
+  if (fingers > 0 && pinch_commands.count(fingers)) {
+    return pinch_commands[fingers][type][PINCH_COMMANDS.at(swipe_type)];
+  }
+  return "";
+}
+
+std::string gebaar::config::Config::get_switch_command(size_t key) {
+  return switch_commands[SWITCH_COMMANDS.at(key)];
 }
