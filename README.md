@@ -226,67 +226,25 @@ trigger_on_release = false
 </details>
 
 **Starting and managing Gebaar with Systemd**
-<details>
-<summary>~/.config/systemd/user/gebaard.service</summary>
 
-```ini
-[Unit]
-Description=Gebaar Daemon
-Documentation=https://github.com/NICHOLAS85/gebaar-libinput
-
-[Service]
-ExecStart=/usr/local/bin/gebaard
-Environment=DISPLAY=:0
-Restart=always
-
-[Install]
-WantedBy=default.target
-```
-
-Once the file is in place simply run the following once to enable and run gebaar automatically.
+Move the file `assets/gebaard.service` to `~/.config/systemd/user/`:
 ```sh
-$ systemctl --user --now enable gebaard
+$ mkdir --parents ~/.config/systemd/user
+$ cp assets/gebaard.service ~/.config/systemd/user
 ```
-</details>
-
-<details>
-<summary>~/.config/systemd/user/gebaard-watcher.service</summary>
-
-```ini
-[Unit]
-Description=Gebaar restarter
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/systemctl --user is-active --quiet gebaard && /usr/bin/systemctl --user restart gebaard.servie
-SuccessExitStatus=0 3
-
-[Install]
-WantedBy=default.target
-```
-
-Once the file is in place simply run the following
+Once the file is in place simply enable the unit to run Gebaar automatically on startup.
 ```sh
-$ systemctl --user enable gebaard-watcher
+$ systemctl --user --now enable gebaard.service
 ```
-</details>
-
-<details>
-<summary>~/.config/systemd/user/gebaard-watcher.path</summary>
-
-```ini
-[Path]
-PathModified=%h/.config/gebaar/gebaard.toml
-
-[Install]
-WantedBy=default.target
+If you would like Gebaar to restart automatically when it's configuration file is modified move `assets/gebaard-watcher.path` and `assets/gebaard-watcher.service` to `~/.config/systemd/user`
+```sh
+$ cp assets/gebaard-watcher.path ~/.config/systemd/user
+$ cp assets/gebaard-watcher.service ~/.config/systemd/user
 ```
-
-Once the file is in place simply run the following to automatically restart Gebaar when it's configuration file is modified.
+Once the files are in place, simply enable the path watcher to have Gebaar restart whenever `~/.config/gebaar/gebaard.toml` is edited:
 ```sh
 $ systemctl --user enable gebaard-watcher.path
 ```
-</details>
 
 ### State of the project
 
@@ -296,7 +254,7 @@ $ systemctl --user enable gebaard-watcher.path
 - [x] Support continuous pinch
 - [x] Support pinch-and-rotate gestures
 - [x] Support touchscreen devices
-- [ ] Receiving rotation events from libinput
+- [ ] Adjust touch gestures based on orientation
 - [x] Receiving switch events from libinput
 - [x] Converting libinput events to motions
 - [x] Running commands based on motions
